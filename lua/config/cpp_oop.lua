@@ -1,0 +1,291 @@
+local M = {}
+
+local function notify(msg, level)
+  local lvl = level == "error" and vim.log.levels.ERROR
+    or level == "warn" and vim.log.levels.WARN
+    or vim.log.levels.INFO
+  vim.notify(msg, lvl, { title = "C++ OOP Mode" })
+end
+
+local function run_background(cmd, callback)
+  local output = {}
+  local job_id = vim.fn.jobstart(cmd, {
+    on_stdout = function(_, data)
+      if data then
+        for _, line in ipairs(data) do
+          if line ~= "" then
+            table.insert(output, line)
+          end
+        end
+      end
+    end,
+    on_stderr = function(_, data)
+      if data then
+        for _, line in ipairs(data) do
+          if line ~= "" then
+            table.insert(output, line)
+          end
+        end
+      end
+    end,
+    on_exit = function(_, exit_code)
+      vim.schedule(function()
+        callback(exit_code == 0, output)
+      end)
+    end,
+  })
+  if job_id <= 0 then
+    notify("Không thể chạy lệnh: " .. cmd, "error")
+  end
+end
+
+local function find_project_root()
+  local file = vim.fn.expand("%:p")
+  if file == "" then
+    return vim.fn.getcwd()
+  end
+  local dir = vim.fn.fnamemodify(file, ":h")
+  while dir ~= vim.fn.fnamemodify(dir, ":h") do
+    if vim.fn.isdirectory(dir .. "/header") == 1 and vim.fn.isdirectory(dir .. "/source") == 1 then
+      return dir
+    end
+    dir = vim.fn.fnamemodify(dir, ":h")
+  end
+  return vim.fn.getcwd()
+end
+
+local function is_oop_dir()
+  return vim.fn.fnamemodify(vim.fn.getcwd(), ":t") == "OOP"
+end
+
+local function run_in_terminal(binary, show_time)
+  if vim.fn.filereadable(binary) ~= 1 then
+    notify("Binary chưa tồn tại, hãy compile trước!", "warn")
+    return
+  end
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf].buftype == "terminal" then
+      pcall(vim.api.nvim_buf_delete, buf, { force = true })
+      break
+    end
+  end
+  vim.cmd("belowright split | resize 15")
+  if show_time then
+    vim.cmd("terminal time " .. vim.fn.shellescape(binary))
+  else
+    vim.cmd("terminal " .. vim.fn.shellescape(binary))
+  end
+  vim.cmd("startinsert")
+end
+
+-- ==================== SỬA TẠI ĐÂY: CHỈ TẠO SOURCE.CPP ====================
+local function scaffold_project(project_path)
+  vim.fn.mkdir(project_path .. "/header", "p")
+  vim.fn.mkdir(project_path .. "/source", "p")
+
+  local files = {
+    ["/source/source.cpp"] = '#include <iostream>\n\nusing namespace std;\n\nint main() {\n    cout << "Hello OOP!" << endl;\n    return 0;\n}\n',
+  }
+
+  for rel_path, content in pairs(files) do
+    local f = io.open(project_path .. rel_path, "w")
+    if f then
+      f:write(content)
+      f:close()
+    end
+  end
+
+  vim.defer_fn(function()
+    vim.cmd("edit " .. project_path .. "/source/source.cpp")
+  end, 100)
+end
+
+-- ==================== AUTO INCLUDE KHI LƯU ====================
+local symbol_to_header = {
+  ["cout"] = "iostream",
+  ["cin"] = "iostream",
+  ["endl"] = "iostream",
+  ["vector"] = "vector",
+  ["string"] = "string",
+  ["map"] = "map",
+  ["set"] = "set",
+  ["sort"] = "algorithm",
+  ["min"] = "algorithm",
+  ["max"] = "algorithm",
+  ["sqrt"] = "cmath",
+  ["pow"] = "cmath",
+  ["ifstream"] = "fstream",
+  ["ofstream"] = "fstream",
+  ["queue"] = "queue",
+  ["stack"] = "stack",
+}
+
+local function setup_auto_include()
+  local auto_group = vim.api.nvim_create_augroup("CppAutoInclude", { clear = true })
+  vim.api.nvim_create_autocmd("BufWritePre", {
+    group = auto_group,
+    pattern = { "*.c", "*.cpp", "*.h", "*.hpp" },
+    callback = function()
+      local content = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
+      local needed = {}
+      for symbol, header in pairs(symbol_to_header) do
+        if
+          content:match("[^a-zA-Z_]" .. symbol .. "[^a-zA-Z_]")
+          and not content:match('#include[%s]*[<"]' .. header .. '[>"]')
+        then
+          needed[header] = true
+        end
+      end
+      if not next(needed) then
+        return
+      end
+      local sorted, insert_line = {}, 1
+      for h in pairs(needed) do
+        table.insert(sorted, h)
+      end
+      table.sort(sorted)
+      for i, line in ipairs(vim.api.nvim_buf_get_lines(0, 0, -1, false)) do
+        if line:match("^#include") or (line:match("^#ifndef") and i <= 5) or line:match("^#pragma once") then
+          insert_line = i + 1
+        end
+      end
+      local insert_lines = {}
+      for _, h in ipairs(sorted) do
+        table.insert(insert_lines, "#include <" .. h .. ">")
+      end
+      vim.api.nvim_buf_set_lines(0, insert_line - 1, insert_line - 1, false, insert_lines)
+      notify("📝 Auto-include: " .. table.concat(sorted, ", "))
+    end,
+  })
+end
+
+-- ==================== SETUP PHÍM TẮT OOP ====================
+function M.setup()
+  setup_auto_include()
+
+  local function setup_oop_keymaps()
+    if not is_oop_dir() then
+      return
+    end
+    local map = vim.keymap.set
+    map("n", "<leader>os", function()
+      vim.ui.input({ prompt = "Tên Solution: " }, function(name)
+        if not name or name == "" then
+          return
+        end
+        local solution_path = vim.fn.getcwd() .. "/" .. name
+        vim.fn.mkdir(solution_path, "p")
+        vim.cmd("cd " .. solution_path)
+        notify("✅ Đã tạo Solution: " .. name)
+        vim.ui.input({ prompt = "Tạo Project đầu tiên? (tên/bỏ trống): " }, function(proj)
+          if proj and proj ~= "" then
+            scaffold_project(solution_path .. "/" .. proj)
+            notify("✅ Đã tạo Project: " .. proj)
+          end
+        end)
+      end)
+    end, { desc = "Tạo Solution mới", silent = true })
+
+    map("n", "<leader>op", function()
+      vim.ui.input({ prompt = "Tên Project: " }, function(name)
+        if not name or name == "" then
+          return
+        end
+        scaffold_project(vim.fn.getcwd() .. "/" .. name)
+        notify("✅ Đã tạo Project: " .. name)
+      end)
+    end, { desc = "Tạo Project mới", silent = true })
+
+    -- ==================== SỬA TẠI ĐÂY: TEMPLATE CLASS MỚI ====================
+    map("n", "<leader>oc", function()
+      vim.ui.input({ prompt = "Tên Class: " }, function(name)
+        if not name or name == "" then
+          return
+        end
+        local root = vim.fn.getcwd()
+        -- Tự động viết hoa chữ cái đầu cho tên class
+        local display = name:sub(1, 1):upper() .. name:sub(2)
+
+        -- Tạo nội dung file Header (.h)
+        local h_path = root .. "/header/" .. display .. ".h"
+        local f = io.open(h_path, "w")
+        if f then
+          f:write(
+            string.format(
+              "#pragma once\n#include <iostream>\n\nusing namespace std;\n\nclass %s {\nprivate:\n\npublic:\n    %s();\n    ~%s();\n};\n",
+              display,
+              display,
+              display
+            )
+          )
+          f:close()
+        end
+
+        -- Tạo nội dung file Source (.cpp)
+        local cpp_path = root .. "/source/" .. display .. ".cpp"
+        f = io.open(cpp_path, "w")
+        if f then
+          f:write(
+            string.format(
+              '#include "%s.h"\n\n%s::%s() {\n    // Constructor\n}\n\n%s::~%s() {\n    // Destructor\n}\n',
+              display,
+              display,
+              display,
+              display,
+              display
+            )
+          )
+          f:close()
+        end
+
+        notify("✅ Đã tạo Class: " .. display)
+        vim.cmd("edit " .. h_path)
+        vim.cmd("vsplit " .. cpp_path)
+      end)
+    end, { desc = "Tạo Class mới", silent = true })
+
+    map("n", "<leader>ob", function()
+      local root = find_project_root()
+      local srcs = vim.fn.glob(root .. "/source/*.cpp", false, true)
+      local binary = root .. "/build/main"
+      vim.fn.mkdir(root .. "/build", "p")
+
+      local cmd = string.format(
+        "%s -std=%s %s -I%s/header/ %s -o %s 2>&1",
+        vim.g.cpp_compiler,
+        vim.g.cpp_std,
+        vim.g.cpp_flags,
+        root,
+        table.concat(srcs, " "),
+        binary
+      )
+      notify("⏳ Đang build...")
+      run_background(cmd, function(success, output)
+        if success then
+          notify("✅ Build thành công!")
+          run_in_terminal(binary, false)
+        else
+          notify("❌ Build thất bại!", "error")
+          vim.fn.setqflist({}, "r", { title = "Build Errors", lines = output })
+          vim.cmd("copen")
+        end
+      end)
+    end, { desc = "Build & Run All", silent = true })
+
+    map("n", "<leader>or", function()
+      run_in_terminal(find_project_root() .. "/build/main", false)
+    end, { desc = "Run (no rebuild)", silent = true })
+
+    notify("🏗️ OOP Mode đã kích hoạt trong: " .. vim.fn.getcwd())
+  end
+
+  local oop_group = vim.api.nvim_create_augroup("OopMode", { clear = true })
+  vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged" }, {
+    group = oop_group,
+    callback = function()
+      vim.defer_fn(setup_oop_keymaps, 200)
+    end,
+  })
+end
+
+return M

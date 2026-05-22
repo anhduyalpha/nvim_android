@@ -1,0 +1,151 @@
+{
+  "Khung Competitive Programming (C++)": {
+    "prefix": "cp",
+    "body":[
+      "#include <bits/stdc++.h>",
+      "using namespace std;",
+      "",
+      "// --- Macros ---",
+      "#define int long long",
+      "#define pb push_back",
+      "#define all(x) (x).begin(), (x).end()",
+      "#define sz(x) ((int)(x).size())",
+      "#define endl '\\n'",
+      "",
+      "const int INF = 1e18;",
+      "const int MOD = 1e9 + 7;",
+      "",
+      "void solve() {",
+      "\t${0:// Code here}",
+      "}",
+      "",
+      "int32_t main() {",
+      "\tios_base::sync_with_stdio(false);",
+      "\tcin.tie(NULL);",
+      "\tint t = 1;",
+      "\t${1:cin >> t;}",
+      "\twhile (t--) {",
+      "\t\tsolve();",
+      "\t}",
+      "\treturn 0;",
+      "}"
+    ],
+    "description": "Boilerplate chuẩn thi đấu thuật toán"
+  },
+  "Hàm Main tiêu chuẩn (Basic)": {
+    "prefix": "main",
+    "body":[
+      "#include <iostream>",
+      "using namespace std;",
+      "",
+      "int main() {",
+      "\tios_base::sync_with_stdio(false);",
+      "\tcin.tie(nullptr);",
+      "\t${1:// Code của bạn ở đây}",
+      "\treturn 0;",
+      "}"
+    ],
+    "description": "Hàm main cơ bản cho các bài tập thông thường"
+  },
+  "Vòng lặp For Tăng": {
+    "prefix": "fori",
+    "body":[
+      "for (int ${1:i} = 0; ${1:i} < ${2:n}; ++${1:i}) {",
+      "\t$3",
+      "}"
+    ],
+    "description": "Vòng lặp từ 0 đến n-1"
+  },
+  "Vòng lặp For Giảm": {
+    "prefix": "forrev",
+    "body":[
+      "for (int ${1:i} = ${2:n} - 1; ${1:i} >= 0; --${1:i}) {",
+      "\t$3",
+      "}"
+    ],
+    "description": "Vòng lặp ngược từ n-1 về 0"
+  },
+  "Nhập mảng nhanh": {
+    "prefix": "cinv",
+    "body": [
+      "for (int &x : ${1:v}) cin >> x;"
+    ],
+    "description": "Nhập nhanh dữ liệu vào mảng/vector"
+  },
+  "In mảng nhanh": {
+    "prefix": "coutv",
+    "body":[
+      "for (int x : ${1:v}) cout << x << \" \";",
+      "cout << endl;"
+    ],
+    "description": "In mảng/vector trên 1 dòng"
+  },
+  "Đọc/Ghi File nhanh (File I/O)": {
+    "prefix": "fio",
+    "body":[
+      "if (fopen(\"${1:input.txt}\", \"r\")) {",
+      "\tfreopen(\"${1:input.txt}\", \"r\", stdin);",
+      "\tfreopen(\"${2:output.txt}\", \"w\", stdout);",
+      "}"
+    ],
+    "description": "Chuyển I/O từ console sang file"
+  },
+  "Ước chung lớn nhất & Bội chung nhỏ nhất": {
+    "prefix": "gcd",
+    "body":[
+      "long long gcd(long long a, long long b) {",
+      "\treturn b == 0 ? a : gcd(b, a % b);",
+      "}",
+      "long long lcm(long long a, long long b) {",
+      "\treturn a / gcd(a, b) * b;",
+      "}"
+    ],
+    "description": "Hàm tính UCLN và BCNN"
+  },
+  "Tìm kiếm nhị phân (Binary Search)": {
+    "prefix": "bs",
+    "body":[
+      "int l = ${1:0}, r = ${2:n - 1}, ans = ${3:-1};",
+      "while (l <= r) {",
+      "\tint mid = l + (r - l) / 2;",
+      "\tif (${4:/* Điều kiện thoả mãn */}) {",
+      "\t\tans = mid;",
+      "\t\t${5:l = mid + 1};",
+      "\t} else {",
+      "\t\t${6:r = mid - 1};",
+      "\t}",
+      "}"
+    ],
+    "description": "Mẫu vòng lặp Binary Search"
+  },
+  "Thuật toán: Depth First Search (DFS)": {
+    "prefix": "dfs",
+    "body":[
+      "void dfs(int u, int p = -1) {",
+      "\tfor (int v : adj[u]) {",
+      "\t\tif (v == p) continue;",
+      "\t\t${1:// Xử lý logic tại đây}",
+      "\t\tdfs(v, u);",
+      "\t}",
+      "}"
+    ],
+    "description": "Duyệt đồ thị DFS"
+  },
+  "Thuật toán: Sàng nguyên tố": {
+    "prefix": "sieve",
+    "body":[
+      "const int MAXN = ${1:1e6 + 5};",
+      "vector<bool> is_prime(MAXN, true);",
+      "void sieve() {",
+      "\tis_prime[0] = is_prime[1] = false;",
+      "\tfor (int i = 2; i * i < MAXN; i++) {",
+      "\t\tif (is_prime[i]) {",
+      "\t\t\tfor (int j = i * i; j < MAXN; j += i)",
+      "\t\t\t\tis_prime[j] = false;",
+      "\t\t}",
+      "\t}",
+      "}"
+    ],
+    "description": "Tìm số nguyên tố nhanh"
+  }
+}

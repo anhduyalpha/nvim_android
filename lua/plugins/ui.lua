@@ -88,20 +88,16 @@ return {
   },
 
   -- ═══════════════════════════════════════════════
-  --  2. LUALINE - Statusline đẹp hơn
+  --  2. LUALINE - Statusline gruvbox
   -- ═══════════════════════════════════════════════
   {
     "nvim-lualine/lualine.nvim",
     opts = function(_, opts)
-      -- Bo tròn các section cho đẹp
-      local function pad(s)
-        return " " .. s .. " "
-      end
-
       opts.options = vim.tbl_deep_extend("force", opts.options or {}, {
         component_separators = { left = "", right = "" },
         section_separators = { left = "", right = "" },
         globalstatus = true,
+        theme = "catppuccin",
         disabled_filetypes = {
           statusline = { "dashboard", "alpha", "snacks_dashboard" },
         },
@@ -206,28 +202,8 @@ return {
   },
 
   -- ═══════════════════════════════════════════════
-  --  6. COLORSCHEME - Warm & readable trên mobile
+  --  6. COLORSCHEME — load từ colorscheme.lua
   -- ═══════════════════════════════════════════════
-  {
-    "folke/tokyonight.nvim",
-    opts = {
-      style = "night",
-      transparent = false,
-      styles = {
-        sidebars = "dark",
-        floats = "dark",
-      },
-      on_highlights = function(hl, c)
-        -- Dashboard header màu vàng
-        hl.AlphaHeader = { fg = c.yellow, bold = true }
-        hl.AlphaButtons = { fg = c.fg_gutter }
-        hl.AlphaFooter = { fg = c.comment, italic = true }
-        -- Explorer viền gọn hơn
-        hl.SnacksNormal = { bg = c.bg_sidebar }
-        hl.SnacksWinBar = { bg = c.bg_sidebar, fg = c.fg_dark }
-      end,
-    },
-  },
 
   -- ═══════════════════════════════════════════════
   --  7. WINBAR - Hiển thị path file trên cùng
@@ -252,8 +228,9 @@ return {
           local ft_icon, ft_color = require("nvim-web-devicons").get_icon_color(filename)
           local modified = vim.bo[props.buf].modified
 
-          local bg = "#1a1b26"
-          local fg = modified and "#e8c547" or "#7aa2f7"
+          -- Catppuccin mocha palette
+          local bg = "#313244"
+          local fg = modified and "#f9e2af" or "#89b4fa"
 
           return {
             { " ", ft_icon, " ", guifg = ft_color, guibg = bg },

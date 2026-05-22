@@ -13,41 +13,62 @@ return {
   -- 1. CÀI ĐẶT PLUGIN CẦN THIẾT
   -- ========================================================================
 
-  -- LSP cho C/C++
+  -- LSP cho C/C++ — tối ưu cho Termux/Android
+  -- Chỉ set mason=false, config clangd sẽ dùng vim.lsp.config ở init.lua
   {
     "neovim/nvim-lspconfig",
+    opts = function(_, opts)
+      opts.servers = opts.servers or {}
+      opts.servers.clangd = { mason = false }
+      return opts
+    end,
+  },
+
+  -- Completion: blink.cmp (đã cài, không dùng nvim-cmp)
+  {
+    "saghen/blink.cmp",
+    optional = true,
     opts = {
-      servers = {
-        clangd = {
-          cmd = { "clangd", "--background-index", "--clang-tidy" },
-          filetypes = { "c", "cpp", "objc", "objcpp" },
-          root_dir = require("lspconfig.util").root_pattern(
-            "compile_commands.json",
-            "compile_flags.txt",
-            ".clangd",
-            "Makefile",
-            "CMakeLists.txt",
-            ".git"
-          ),
+      keymap = {
+        preset = "default",
+        ["<CR>"] = { "accept", "fallback" },
+        ["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
+        ["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
+        ["<C-e>"] = { "hide", "fallback" },
+      },
+      completion = {
+        list = {
+          selection = { preselect = true, auto_insert = true },
+          max_items = 50,
+        },
+        menu = {
+          draw = {
+            columns = {
+              { "label", "label_description", gap = 1 },
+              { "kind_icon", "kind", gap = 1 },
+            },
+          },
+        },
+        documentation = {
+          auto_show = true,
+          auto_show_delay_ms = 300,
+        },
+        ghost_text = { enabled = true },
+      },
+      sources = {
+        default = { "lsp", "snippets", "path", "buffer" },
+        per_filetype = {
+          cpp = { "lsp", "snippets", "path", "buffer" },
+          c = { "lsp", "snippets", "path", "buffer" },
+        },
+        providers = {
+          lsp = { min_keyword_length = 2, score_offset = 100 },
+          snippets = { min_keyword_length = 2, score_offset = 80 },
+          buffer = { min_keyword_length = 4, max_items = 10, score_offset = -100 },
         },
       },
+      signature = { enabled = true },
     },
-  },
-
-  -- Completion
-  {
-    "hrsh7th/nvim-cmp",
-    dependencies = {
-      "hrsh7th/cmp-nvim-lsp",
-      "hrsh7th/cmp-buffer",
-      "hrsh7th/cmp-path",
-    },
-  },
-
-  -- Which-key cho phím tắt
-  {
-    "folke/which-key.nvim",
-    opts = {},
   },
 
   -- ========================================================================
@@ -57,9 +78,9 @@ return {
   {
     "folke/which-key.nvim",
     opts = function(_, opts)
-      -- Thêm OOP mode vào which-key registrations
+      -- Thêm OOP mode vào which-key registrations (API mới)
       vim.list_extend(opts.defaults or {}, {
-        { "<leader>o", group = "🏗️ OOP Mode" },
+        { "<leader>o", group = "OOP Mode" },
         { "<leader>os", desc = "Tạo Solution" },
         { "<leader>op", desc = "Tạo Project" },
         { "<leader>oc", desc = "Tạo Class" },
@@ -325,17 +346,16 @@ void Example::hello() {
           return
         end
 
-        -- Đăng ký which-key cho buffer hiện tại
-        wk.register({
-          c = {
-            name = "⚡ C++ Dev",
-            t = { "Compile & Run" },
-            s = { "Compile & Run + Time" },
-            v = { "Compile + UBSan" },
-            r = { "Re-run binary" },
-            e = { "Show errors (quickfix)" },
-          },
-        }, { prefix = "", mode = "n", buffer = 0 })
+        -- Đăng ký which-key cho buffer hiện tại (dùng wk.add API mới)
+        wk.add({
+          { "<leader>c", group = "C++ Dev", buffer = 0 },
+          { "<leader>ct", desc = "Compile & Run", buffer = 0 },
+          { "<leader>cs", desc = "Compile & Run + Time", buffer = 0 },
+          { "<leader>cv", desc = "Compile + UBSan", buffer = 0 },
+          { "<leader>cr", desc = "Re-run binary", buffer = 0 },
+          { "<leader>ce", desc = "Show errors (quickfix)", buffer = 0 },
+          { "<leader>cR", desc = "Restart clangd", buffer = 0 },
+        })
 
         -- `c` mở which-key
         vim.keymap.set("n", "c", function()
@@ -386,6 +406,12 @@ void Example::hello() {
             vim.cmd("copen")
           end
         end, { buffer = 0, desc = "Show errors", silent = true })
+
+        -- cR: Restart clangd (khi completion bị stuck)
+        vim.keymap.set("n", "cR", function()
+          vim.cmd("LspRestart clangd")
+          notify("clangd restarted")
+        end, { buffer = 0, desc = "Restart clangd", silent = true })
       end
 
       -- ==================================================================
@@ -739,7 +765,7 @@ void Example::hello() {
       })
 
       -- ==================================================================
-      -- AUTOCMD: KÍCH HOẠT LEADER `c` KHI MỞ C/C++ BUFFER
+      -- AUTOCMD: KÍCH HOẠT LEADER `c` KHI MỞ C/C++ BUFFER & INDENT
       -- ==================================================================
 
       local cpp_group = vim.api.nvim_create_augroup("CppLeaderKey", { clear = true })
@@ -747,6 +773,13 @@ void Example::hello() {
         group = cpp_group,
         pattern = { "c", "cpp" },
         callback = function()
+          -- === THÊM VÀO ĐÂY: Cấu hình 4 spaces chuẩn Visual Studio ===
+          vim.opt_local.shiftwidth = 4
+          vim.opt_local.tabstop = 4
+          vim.opt_local.softtabstop = 4
+          vim.opt_local.expandtab = true
+          -- ===========================================================
+
           vim.defer_fn(setup_cpp_leader, 100)
         end,
       })
