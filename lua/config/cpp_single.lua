@@ -65,8 +65,8 @@ local function get_build_binary()
   if file == "" then
     return nil
   end
-  local project_root = find_project_root()
-  return project_root .. "/build/" .. vim.fn.fnamemodify(file, ":t:r")
+  local parent_dir = vim.fn.fnamemodify(file, ":h")
+  return parent_dir .. "/build/" .. vim.fn.fnamemodify(file, ":t:r")
 end
 
 local function compile_current(extra_flags, callback)
@@ -76,8 +76,8 @@ local function compile_current(extra_flags, callback)
     return
   end
 
-  local project_root = find_project_root()
-  local build_dir = project_root .. "/build"
+  local parent_dir = vim.fn.fnamemodify(file, ":h")
+  local build_dir = parent_dir .. "/build"
   vim.fn.mkdir(build_dir, "p")
 
   local binary = get_build_binary()

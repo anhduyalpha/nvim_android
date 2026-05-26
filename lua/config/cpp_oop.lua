@@ -197,6 +197,8 @@ function M.setup()
       end
     end, { desc = "Toggle Debug/Release Compile Mode", silent = true })
 
+    map("n", "<leader>oqq", "<esc>", { desc = "Thoát WhichKey", silent = true })
+
     map("n", "<leader>os", function()
       vim.ui.input({ prompt = "Tên Solution: " }, function(name)
         if not name or name == "" then
@@ -272,8 +274,9 @@ function M.setup()
     map("n", "<leader>ob", function()
       local root = find_project_root()
       local srcs = vim.fn.glob(root .. "/source/*.cpp", false, true)
-      local binary = root .. "/build/main"
-      vim.fn.mkdir(root .. "/build", "p")
+      local build_dir = root .. "/source/build"
+      local binary = build_dir .. "/main"
+      vim.fn.mkdir(build_dir, "p")
 
       local cmd = string.format(
         "%s -std=%s %s -I%s/header/ %s -o %s 2>&1",
@@ -298,7 +301,7 @@ function M.setup()
     end, { desc = "Build & Run All", silent = true })
 
     map("n", "<leader>or", function()
-      run_in_terminal(find_project_root() .. "/build/main", false)
+      run_in_terminal(find_project_root() .. "/source/build/main", false)
     end, { desc = "Run (no rebuild)", silent = true })
 
     notify("🏗️ OOP Mode đã kích hoạt trong: " .. vim.fn.getcwd())

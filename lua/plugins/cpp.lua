@@ -106,6 +106,9 @@ return {
         { "<leader>oc", desc = "Tạo Class" },
         { "<leader>ob", desc = "Build & Run All" },
         { "<leader>or", desc = "Run (no rebuild)" },
+        { "<leader>om", desc = "Toggle Debug/Release Mode" },
+        { "<leader>oq", group = "Thoát Menu" },
+        { "<leader>oqq", desc = "Thoát WhichKey" },
       })
       return opts
     end,
@@ -184,18 +187,18 @@ return {
         return vim.fn.getcwd()
       end
 
-      --- Lấy đường dẫn binary trong build/ (trong project root)
+      --- Lấy đường dẫn binary trong build/ (cùng cấp với file cpp)
       local function get_build_binary()
         local file = vim.fn.expand("%:p")
         if file == "" then
           return nil
         end
-        local project_root = find_project_root()
+        local parent_dir = vim.fn.fnamemodify(file, ":h")
         local name = vim.fn.fnamemodify(file, ":t:r")
-        return project_root .. "/build/" .. name
+        return parent_dir .. "/build/" .. name
       end
 
-      --- Compile file C/C++ hiện tại → output vào build/ (trong project root)
+      --- Compile file C/C++ hiện tại → output vào build/ (cùng cấp với file cpp)
       --- Nếu trong project OOP → compile tất cả source/*.cpp
       local function compile_current(extra_flags, callback)
         local file = vim.fn.expand("%:p")
@@ -205,8 +208,8 @@ return {
         end
 
         local binary = get_build_binary()
-        local project_root = find_project_root()
-        local build_dir = project_root .. "/build"
+        local parent_dir = vim.fn.fnamemodify(file, ":h")
+        local build_dir = parent_dir .. "/build"
         vim.fn.mkdir(build_dir, "p")
 
         local compiler = vim.g.cpp_compiler
@@ -378,6 +381,8 @@ void Example::hello() {
           { "cx", desc = "Re-run binary", buffer = 0 },
           { "ce", desc = "Show errors (quickfix)", buffer = 0 },
           { "cR", desc = "Restart clangd", buffer = 0 },
+          { "cq", group = "Thoát Menu", buffer = 0 },
+          { "cqq", "<esc>", desc = "Thoát WhichKey", buffer = 0 },
         })
 
         -- Khởi tạo biến mode nếu chưa có
@@ -591,10 +596,8 @@ void Example::hello() {
           local compiler = vim.g.cpp_compiler
           local std = vim.g.cpp_std
           local flags = vim.g.cpp_flags
-          local build_dir = project_root .. "/build"
-          vim.fn.mkdir(build_dir, "p")
-
-          local cmd, binary
+          
+          local cmd, binary, build_dir
 
           if vim.fn.isdirectory(source_dir) == 1 then
             -- OOP project: compile tất cả source/*.cpp
@@ -603,6 +606,8 @@ void Example::hello() {
               notify("Không tìm thấy .cpp trong source/!", "warn")
               return
             end
+            build_dir = source_dir .. "/build"
+            vim.fn.mkdir(build_dir, "p")
             binary = build_dir .. "/main"
             local include_flag = vim.fn.isdirectory(header_dir) == 1 and "-I" .. header_dir .. "/ " or ""
             cmd = string.format(
@@ -621,6 +626,9 @@ void Example::hello() {
               notify("Không có file nào đang mở!", "warn")
               return
             end
+            local parent_dir = vim.fn.fnamemodify(file, ":h")
+            build_dir = parent_dir .. "/build"
+            vim.fn.mkdir(build_dir, "p")
             local name = vim.fn.fnamemodify(file, ":t:r")
             binary = build_dir .. "/" .. name
             cmd = string.format("%s -std=%s %s %s -o %s 2>&1", compiler, std, flags, file, binary)
@@ -643,19 +651,22 @@ void Example::hello() {
         vim.keymap.set("n", "<leader>or", function()
           local project_root = find_project_root()
           local source_dir = project_root .. "/source"
-          local build_dir = project_root .. "/build"
           local binary
 
           if vim.fn.isdirectory(source_dir) == 1 then
-            binary = build_dir .. "/main"
+            binary = project_root .. "/source/build/main"
           else
             local file = vim.fn.expand("%:p")
+            local parent_dir = vim.fn.fnamemodify(file, ":h")
             local name = vim.fn.fnamemodify(file, ":t:r")
-            binary = build_dir .. "/" .. name
+            binary = parent_dir .. "/build/" .. name
           end
 
           run_in_terminal(binary, false)
         end, { desc = "Run (no rebuild)", silent = true })
+
+        -- <leader>oqq: Thoát WhichKey
+        vim.keymap.set("n", "<leader>oqq", "<esc>", { desc = "Thoát WhichKey", silent = true })
 
         notify("🏗️ OOP Mode đã kích hoạt trong: " .. vim.fn.getcwd())
       end
