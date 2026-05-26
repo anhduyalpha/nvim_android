@@ -106,20 +106,87 @@ end
 local symbol_to_header = {
   ["cout"] = "iostream",
   ["cin"] = "iostream",
+  ["cerr"] = "iostream",
   ["endl"] = "iostream",
   ["vector"] = "vector",
   ["string"] = "string",
+  ["to_string"] = "string",
   ["map"] = "map",
+  ["multimap"] = "map",
+  ["unordered_map"] = "unordered_map",
   ["set"] = "set",
+  ["multiset"] = "set",
+  ["unordered_set"] = "unordered_set",
   ["sort"] = "algorithm",
+  ["reverse"] = "algorithm",
+  ["find"] = "algorithm",
   ["min"] = "algorithm",
   ["max"] = "algorithm",
+  ["swap"] = "algorithm",
+  ["lower_bound"] = "algorithm",
+  ["upper_bound"] = "algorithm",
+  ["next_permutation"] = "algorithm",
+  ["setw"] = "iomanip",
+  ["setprecision"] = "iomanip",
+  ["fixed"] = "iomanip",
   ["sqrt"] = "cmath",
   ["pow"] = "cmath",
+  ["abs"] = "cmath",
+  ["ceil"] = "cmath",
+  ["floor"] = "cmath",
+  ["log"] = "cmath",
+  ["sin"] = "cmath",
+  ["cos"] = "cmath",
+  ["rand"] = "cstdlib",
+  ["srand"] = "cstdlib",
+  ["atoi"] = "cstdlib",
+  ["printf"] = "cstdio",
+  ["scanf"] = "cstdio",
+  ["sprintf"] = "cstdio",
+  ["sscanf"] = "cstdio",
   ["ifstream"] = "fstream",
   ["ofstream"] = "fstream",
+  ["fstream"] = "fstream",
+  ["unique_ptr"] = "memory",
+  ["shared_ptr"] = "memory",
+  ["make_unique"] = "memory",
+  ["make_shared"] = "memory",
+  ["pair"] = "utility",
+  ["make_pair"] = "utility",
+  ["move"] = "utility",
+  ["forward"] = "utility",
+  ["function"] = "functional",
+  ["bind"] = "functional",
+  ["array"] = "array",
+  ["list"] = "list",
+  ["deque"] = "deque",
   ["queue"] = "queue",
+  ["priority_queue"] = "queue",
   ["stack"] = "stack",
+  ["accumulate"] = "numeric",
+  ["iota"] = "numeric",
+  ["strlen"] = "cstring",
+  ["strcpy"] = "cstring",
+  ["strcmp"] = "cstring",
+  ["memset"] = "cstring",
+  ["memcpy"] = "cstring",
+  ["stringstream"] = "sstream",
+  ["istringstream"] = "sstream",
+  ["ostringstream"] = "sstream",
+  ["time"] = "ctime",
+  ["clock"] = "ctime",
+  ["chrono"] = "chrono",
+  ["thread"] = "thread",
+  ["mutex"] = "mutex",
+  ["malloc"] = "cstdlib",
+  ["calloc"] = "cstdlib",
+  ["realloc"] = "cstdlib",
+  ["free"] = "cstdlib",
+  ["exit"] = "cstdlib",
+  ["bool"] = "cstdbool",
+  ["true"] = "cstdbool",
+  ["false"] = "cstdbool",
+  ["assert"] = "cassert",
 }
 
 local function has_include(content, header)
@@ -142,10 +209,36 @@ local function setup_auto_include()
         words[word] = true
       end
 
+      -- Tự động phát hiện file C hay C++
+      local file = vim.fn.expand("%:p")
+      local ext = vim.fn.fnamemodify(file, ":e")
+      local is_c = (ext == "c" or ext == "h" or vim.bo.filetype == "c")
+
       local needed = {}
       for symbol, header in pairs(symbol_to_header) do
-        if words[symbol] and not has_include(content, header) then
-          needed[header] = true
+        local mapped_header = header
+        if is_c then
+          if header == "cstdio" then mapped_header = "stdio.h"
+          elseif header == "cstdlib" then mapped_header = "stdlib.h"
+          elseif header == "cstring" then mapped_header = "string.h"
+          elseif header == "cmath" then mapped_header = "math.h"
+          elseif header == "ctime" then mapped_header = "time.h"
+          elseif header == "cassert" then mapped_header = "assert.h"
+          elseif header == "cstdbool" then mapped_header = "stdbool.h"
+          else
+            mapped_header = nil
+          end
+        else
+          -- Trong C++, cstdbool không cần thiết vì bool/true/false là built-in
+          if header == "cstdbool" then
+            mapped_header = nil
+          elseif header == "cassert" then
+            mapped_header = "cassert"
+          end
+        end
+
+        if mapped_header and words[symbol] and not has_include(content, mapped_header) then
+          needed[mapped_header] = true
         end
       end
       
@@ -153,16 +246,19 @@ local function setup_auto_include()
         return
       end
       
-      local sorted, insert_line = {}, 1
+      local sorted = {}
       for h in pairs(needed) do
         table.insert(sorted, h)
       end
       table.sort(sorted)
+      
+      local insert_line = 1
       for i, line in ipairs(lines) do
-        if line:match("^#include") or (line:match("^#ifndef") and i <= 5) or line:match("^#pragma once") then
+        if line:match("^#include") or ((line:match("^#ifndef") or line:match("^#pragma once")) and i <= 5) then
           insert_line = i + 1
         end
       end
+      
       local insert_lines = {}
       for _, h in ipairs(sorted) do
         table.insert(insert_lines, "#include <" .. h .. ">")
@@ -273,19 +369,39 @@ function M.setup()
 
     map("n", "<leader>ob", function()
       local root = find_project_root()
-      local srcs = vim.fn.glob(root .. "/source/*.cpp", false, true)
+      local file = vim.fn.expand("%:p")
+      local ext = file ~= "" and vim.fn.fnamemodify(file, ":e") or ""
+      local is_c = (ext == "c" or ext == "h" or vim.bo.filetype == "c")
+
+      local compiler = is_c and "clang" or vim.g.cpp_compiler
+      local std = is_c and "c17" or vim.g.cpp_std
+      local flags = vim.g.cpp_flags
+
+      local pattern = is_c and "/*.c" or "/*.cpp"
+      local srcs = vim.fn.glob(root .. "/source" .. pattern, false, true)
+      if #srcs == 0 then
+        notify("Không tìm thấy file nguồn trong source/!", "warn")
+        return
+      end
+
       local build_dir = root .. "/source/build"
       local binary = build_dir .. "/main"
       vim.fn.mkdir(build_dir, "p")
 
+      local include_flag = vim.fn.isdirectory(root .. "/header") == 1 and "-I" .. vim.fn.shellescape(root .. "/header") .. " " or ""
+      local escaped_srcs = {}
+      for _, s in ipairs(srcs) do
+        table.insert(escaped_srcs, vim.fn.shellescape(s))
+      end
+
       local cmd = string.format(
-        "%s -std=%s %s -I%s/header/ %s -o %s 2>&1",
-        vim.g.cpp_compiler,
-        vim.g.cpp_std,
-        vim.g.cpp_flags,
-        root,
-        table.concat(srcs, " "),
-        binary
+        "%s -std=%s %s %s%s -o %s 2>&1",
+        compiler,
+        std,
+        flags,
+        include_flag,
+        table.concat(escaped_srcs, " "),
+        vim.fn.shellescape(binary)
       )
       notify("⏳ Đang build...")
       run_background(cmd, function(success, output)

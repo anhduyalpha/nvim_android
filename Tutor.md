@@ -49,8 +49,14 @@ Tự động kích hoạt khi bạn mở hoặc di chuyển (`cd`) vào một th
 
 Để giúp Neovim trên điện thoại mượt mà và không bị giật lag, các cấu hình sau đã được thiết lập tự động:
 
+### 🛡️ Tự Động Hỗ Trợ C & C++ Song Song (Dynamic C/C++ Native Support)
+- **Nhận diện cực kỳ thông minh**: Hệ thống tự động phân biệt file bạn đang làm việc là `.c` / `.h` (ngôn ngữ C) hay `.cpp` / `.hpp` (ngôn ngữ C++).
+- **Bộ biên dịch tự động đổi**: Khi lập trình C, Neovim tự động sử dụng **`clang`** với cờ tiêu chuẩn **`-std=c17`**. Khi lập trình C++, hệ thống sẽ tự động gọi **`clang++`** với cờ **`-std=c++20`**.
+- **Tự động dịch tiêu đề C chuẩn (Auto C Header Translation)**: Khi bạn lưu file C, các ký tự gọi hàm phổ biến (như `printf`, `malloc`, `bool`, `assert`) sẽ được tự động chèn các thư viện C chuẩn tương ứng như `<stdio.h>`, `<stdlib.h>`, `<stdbool.h>`, `<assert.h>`, `<string.h>` thay vì chèn các wrapper C++ như `<cstdio>`, giúp code của bạn luôn sạch sẽ, đúng tiêu chuẩn C cổ điển và biên dịch thành công ngay lập tức!
+- **Bảo vệ đường dẫn chứa dấu cách (Spaces in Path Protection)**: Toàn bộ lệnh biên dịch được bảo vệ bằng cơ chế `shellescape` chặt chẽ, loại bỏ hoàn toàn các lỗi crash biên dịch do đường dẫn thư mục hoặc file chứa khoảng trắng trên Android!
+
 ### 📁 Thư Mục Build Cùng Cấp (Same-Level Build)
-- **Tối ưu hóa mới**: Thư mục `build/` chứa file nhị phân đầu ra sau khi biên dịch giờ đây sẽ luôn được tự động tạo **cùng cấp (trong cùng một thư mục)** với file C++ đang được build (Đối với OOP Mode, file chạy sẽ nằm trong `source/build/main`).
+- **Tối ưu hóa mới**: Thư mục `build/` chứa file nhị phân đầu ra sau khi biên dịch giờ đây sẽ luôn được tự động tạo **cùng cấp (trong cùng một thư mục)** với file C/C++ đang được build (Đối với OOP Mode, file chạy sẽ nằm trong `source/build/main`).
 - Điều này giúp các dự án của bạn sạch sẽ hơn, dễ quản lý các file chạy đi kèm, và không làm rác thư mục gốc dự án!
 
 ### 💾 Tự Động Lưu khi thoát Insert Mode (Autosave on InsertLeave)

@@ -212,17 +212,23 @@ return {
         local build_dir = parent_dir .. "/build"
         vim.fn.mkdir(build_dir, "p")
 
-        local compiler = vim.g.cpp_compiler
-        local std = vim.g.cpp_std
-        local flags = vim.g.cpp_flags
+        -- Tự động phát hiện file C hay C++ để chọn compiler & standard phù hợp
+        local ext = vim.fn.fnamemodify(file, ":e")
+        local is_c = (ext == "c" or ext == "h" or vim.bo.filetype == "c")
 
-        -- Nếu trong project OOP (có header/ + source/), compile tất cả source/*.cpp
+        local compiler = is_c and "clang" or vim.g.cpp_compiler
+        local std = is_c and "c17" or vim.g.cpp_std
+        local flags = vim.g.cpp_flags
+        local project_root = find_project_root()
+
+        -- Nếu trong project OOP (có header/ + source/), compile tất cả source/*.cpp (hoặc *.c)
         local extra_sources = ""
         local include_flag = ""
         if
           vim.fn.isdirectory(project_root .. "/header") == 1 and vim.fn.isdirectory(project_root .. "/source") == 1
         then
-          local srcs = vim.fn.glob(project_root .. "/source/*.cpp", false, true)
+          local pattern = is_c and "/*.c" or "/*.cpp"
+          local srcs = vim.fn.glob(project_root .. "/source" .. pattern, false, true)
           -- Loại trừ file hiện tại nếu nó nằm trong source/
           local filtered = {}
           for _, s in ipairs(srcs) do
@@ -231,20 +237,25 @@ return {
             end
           end
           if #filtered > 0 then
-            extra_sources = " " .. table.concat(filtered, " ")
+            local escaped_srcs = {}
+            for _, s in ipairs(filtered) do
+              table.insert(escaped_srcs, vim.fn.shellescape(s))
+            end
+            extra_sources = " " .. table.concat(escaped_srcs, " ")
           end
-          include_flag = "-I" .. project_root .. "/header/ "
+          include_flag = "-I" .. vim.fn.shellescape(project_root .. "/header/") .. " "
         end
 
         local cmd = string.format(
-          "%s -std=%s %s %s%s%s -o %s 2>&1",
+          "%s -std=%s %s %s%s%s -o %s %s 2>&1",
           compiler,
           std,
           flags,
           include_flag,
-          file,
+          vim.fn.shellescape(file),
           extra_sources,
-          binary
+          vim.fn.shellescape(binary),
+          extra_flags or ""
         )
 
         notify("⏳ Đang compile...")
@@ -259,7 +270,9 @@ return {
             })
             vim.cmd("copen")
           end
-          callback(success, output, binary)
+          if callback then
+            callback(success, output, binary)
+          end
         end)
       end
 
@@ -593,35 +606,43 @@ void Example::hello() {
           local source_dir = project_root .. "/source"
           local header_dir = project_root .. "/header"
 
-          local compiler = vim.g.cpp_compiler
-          local std = vim.g.cpp_std
+          local file = vim.fn.expand("%:p")
+          local ext = file ~= "" and vim.fn.fnamemodify(file, ":e") or ""
+          local is_c = (ext == "c" or ext == "h" or vim.bo.filetype == "c")
+
+          local compiler = is_c and "clang" or vim.g.cpp_compiler
+          local std = is_c and "c17" or vim.g.cpp_std
           local flags = vim.g.cpp_flags
           
           local cmd, binary, build_dir
 
           if vim.fn.isdirectory(source_dir) == 1 then
-            -- OOP project: compile tất cả source/*.cpp
-            local srcs = vim.fn.glob(source_dir .. "/*.cpp", false, true)
+            -- OOP project: compile tất cả source/*.cpp hoặc source/*.c
+            local pattern = is_c and "/*.c" or "/*.cpp"
+            local srcs = vim.fn.glob(source_dir .. pattern, false, true)
             if #srcs == 0 then
-              notify("Không tìm thấy .cpp trong source/!", "warn")
+              notify("Không tìm thấy file nguồn trong source/!", "warn")
               return
             end
             build_dir = source_dir .. "/build"
             vim.fn.mkdir(build_dir, "p")
             binary = build_dir .. "/main"
-            local include_flag = vim.fn.isdirectory(header_dir) == 1 and "-I" .. header_dir .. "/ " or ""
+            local include_flag = vim.fn.isdirectory(header_dir) == 1 and "-I" .. vim.fn.shellescape(header_dir) .. " " or ""
+            local escaped_srcs = {}
+            for _, s in ipairs(srcs) do
+              table.insert(escaped_srcs, vim.fn.shellescape(s))
+            end
             cmd = string.format(
               "%s -std=%s %s %s%s -o %s 2>&1",
               compiler,
               std,
               flags,
               include_flag,
-              table.concat(srcs, " "),
-              binary
+              table.concat(escaped_srcs, " "),
+              vim.fn.shellescape(binary)
             )
           else
             -- Single file: compile file hiện tại
-            local file = vim.fn.expand("%:p")
             if file == "" then
               notify("Không có file nào đang mở!", "warn")
               return
@@ -631,7 +652,14 @@ void Example::hello() {
             vim.fn.mkdir(build_dir, "p")
             local name = vim.fn.fnamemodify(file, ":t:r")
             binary = build_dir .. "/" .. name
-            cmd = string.format("%s -std=%s %s %s -o %s 2>&1", compiler, std, flags, file, binary)
+            cmd = string.format(
+              "%s -std=%s %s %s -o %s 2>&1",
+              compiler,
+              std,
+              flags,
+              vim.fn.shellescape(file),
+              vim.fn.shellescape(binary)
+            )
           end
 
           notify("⏳ Đang build...")
@@ -750,6 +778,15 @@ void Example::hello() {
         ["chrono"] = "chrono",
         ["thread"] = "thread",
         ["mutex"] = "mutex",
+        ["malloc"] = "cstdlib",
+        ["calloc"] = "cstdlib",
+        ["realloc"] = "cstdlib",
+        ["free"] = "cstdlib",
+        ["exit"] = "cstdlib",
+        ["bool"] = "cstdbool",
+        ["true"] = "cstdbool",
+        ["false"] = "cstdbool",
+        ["assert"] = "cassert",
       }
 
       local function has_include(content, header)
@@ -764,8 +801,8 @@ void Example::hello() {
           if line:match("^#include") then
             last_include = i
           end
-          if line:match("^#ifndef") and i <= 5 then
-            after_guard = i + 1
+          if (line:match("^#ifndef") or line:match("^#pragma once")) and i <= 5 then
+            after_guard = i
           end
         end
         if last_include > 0 then
@@ -791,10 +828,36 @@ void Example::hello() {
             words[word] = true
           end
 
+          -- Tự động phát hiện file C hay C++
+          local file = vim.fn.expand("%:p")
+          local ext = vim.fn.fnamemodify(file, ":e")
+          local is_c = (ext == "c" or ext == "h" or vim.bo.filetype == "c")
+
           local needed = {}
           for symbol, header in pairs(symbol_to_header) do
-            if words[symbol] and not has_include(content, header) then
-              needed[header] = true
+            local mapped_header = header
+            if is_c then
+              if header == "cstdio" then mapped_header = "stdio.h"
+              elseif header == "cstdlib" then mapped_header = "stdlib.h"
+              elseif header == "cstring" then mapped_header = "string.h"
+              elseif header == "cmath" then mapped_header = "math.h"
+              elseif header == "ctime" then mapped_header = "time.h"
+              elseif header == "cassert" then mapped_header = "assert.h"
+              elseif header == "cstdbool" then mapped_header = "stdbool.h"
+              else
+                mapped_header = nil
+              end
+            else
+              -- Trong C++, cstdbool không cần thiết vì bool/true/false là built-in
+              if header == "cstdbool" then
+                mapped_header = nil
+              elseif header == "cassert" then
+                mapped_header = "cassert"
+              end
+            end
+
+            if mapped_header and words[symbol] and not has_include(content, mapped_header) then
+              needed[mapped_header] = true
             end
           end
 

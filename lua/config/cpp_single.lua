@@ -81,11 +81,23 @@ local function compile_current(extra_flags, callback)
   vim.fn.mkdir(build_dir, "p")
 
   local binary = get_build_binary()
-  local compiler, std, flags = vim.g.cpp_compiler, vim.g.cpp_std, vim.g.cpp_flags
-  local extra_sources, include_flag = "", ""
+  local ext = vim.fn.fnamemodify(file, ":e")
+  local is_c = (ext == "c" or ext == "h" or vim.bo.filetype == "c")
 
-  if vim.fn.isdirectory(project_root .. "/header") == 1 and vim.fn.isdirectory(project_root .. "/source") == 1 then
-    local srcs = vim.fn.glob(project_root .. "/source/*.cpp", false, true)
+  local compiler = is_c and "clang" or vim.g.cpp_compiler
+  local std = is_c and "c17" or vim.g.cpp_std
+  local flags = vim.g.cpp_flags
+  local project_root = find_project_root()
+
+  -- Nếu trong project OOP (có header/ + source/), compile tất cả source/*.cpp (hoặc *.c)
+  local extra_sources = ""
+  local include_flag = ""
+  if
+    vim.fn.isdirectory(project_root .. "/header") == 1 and vim.fn.isdirectory(project_root .. "/source") == 1
+  then
+    local pattern = is_c and "/*.c" or "/*.cpp"
+    local srcs = vim.fn.glob(project_root .. "/source" .. pattern, false, true)
+    -- Loại trừ file hiện tại nếu nó nằm trong source/
     local filtered = {}
     for _, s in ipairs(srcs) do
       if s ~= file then
@@ -93,13 +105,26 @@ local function compile_current(extra_flags, callback)
       end
     end
     if #filtered > 0 then
-      extra_sources = " " .. table.concat(filtered, " ")
+      local escaped_srcs = {}
+      for _, s in ipairs(filtered) do
+        table.insert(escaped_srcs, vim.fn.shellescape(s))
+      end
+      extra_sources = " " .. table.concat(escaped_srcs, " ")
     end
-    include_flag = "-I" .. project_root .. "/header/ "
+    include_flag = "-I" .. vim.fn.shellescape(project_root .. "/header/") .. " "
   end
 
-  local cmd =
-    string.format("%s -std=%s %s %s%s%s -o %s 2>&1", compiler, std, flags, include_flag, file, extra_sources, binary)
+  local cmd = string.format(
+    "%s -std=%s %s %s%s%s -o %s %s 2>&1",
+    compiler,
+    std,
+    flags,
+    include_flag,
+    vim.fn.shellescape(file),
+    extra_sources,
+    vim.fn.shellescape(binary),
+    extra_flags or ""
+  )
 
   notify("⏳ Đang compile...")
   run_background(cmd, function(success, output)
@@ -110,7 +135,9 @@ local function compile_current(extra_flags, callback)
       vim.fn.setqflist({}, "r", { title = "Compile Errors", lines = output })
       vim.cmd("copen")
     end
-    callback(success, output, binary)
+    if callback then
+      callback(success, output, binary)
+    end
   end)
 end
 
