@@ -384,7 +384,7 @@ function M.setup()
         return
       end
 
-      local build_dir = root .. "/source/build"
+      local build_dir = root .. "/build"
       local binary = build_dir .. "/main"
       vim.fn.mkdir(build_dir, "p")
 
@@ -417,7 +417,7 @@ function M.setup()
     end, { desc = "Build & Run All", silent = true })
 
     map("n", "<leader>or", function()
-      run_in_terminal(find_project_root() .. "/source/build/main", false)
+      run_in_terminal(find_project_root() .. "/build/main", false)
     end, { desc = "Run (no rebuild)", silent = true })
 
     notify("🏗️ OOP Mode đã kích hoạt trong: " .. vim.fn.getcwd())

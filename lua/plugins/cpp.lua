@@ -187,19 +187,24 @@ return {
         return vim.fn.getcwd()
       end
 
-      --- Lấy đường dẫn binary trong build/ (cùng cấp với file cpp)
+      --- Lấy đường dẫn binary trong build/ (nếu là OOP project thì nằm ở thư mục project root)
       local function get_build_binary()
         local file = vim.fn.expand("%:p")
         if file == "" then
           return nil
         end
-        local parent_dir = vim.fn.fnamemodify(file, ":h")
-        local name = vim.fn.fnamemodify(file, ":t:r")
-        return parent_dir .. "/build/" .. name
+        local project_root = find_project_root()
+        if vim.fn.isdirectory(project_root .. "/header") == 1 and vim.fn.isdirectory(project_root .. "/source") == 1 then
+          return project_root .. "/build/main"
+        else
+          local parent_dir = vim.fn.fnamemodify(file, ":h")
+          local name = vim.fn.fnamemodify(file, ":t:r")
+          return parent_dir .. "/build/" .. name
+        end
       end
 
-      --- Compile file C/C++ hiện tại → output vào build/ (cùng cấp với file cpp)
-      --- Nếu trong project OOP → compile tất cả source/*.cpp
+      --- Compile file C/C++ hiện tại → output vào build/
+      --- Nếu trong project OOP → compile tất cả source/*.cpp và output vào thư mục project_root/build/
       local function compile_current(extra_flags, callback)
         local file = vim.fn.expand("%:p")
         if file == "" then
@@ -208,8 +213,16 @@ return {
         end
 
         local binary = get_build_binary()
-        local parent_dir = vim.fn.fnamemodify(file, ":h")
-        local build_dir = parent_dir .. "/build"
+        local project_root = find_project_root()
+        local is_oop = vim.fn.isdirectory(project_root .. "/header") == 1 and vim.fn.isdirectory(project_root .. "/source") == 1
+        
+        local build_dir
+        if is_oop then
+          build_dir = project_root .. "/build"
+        else
+          local parent_dir = vim.fn.fnamemodify(file, ":h")
+          build_dir = parent_dir .. "/build"
+        end
         vim.fn.mkdir(build_dir, "p")
 
         -- Tự động phát hiện file C hay C++ để chọn compiler & standard phù hợp
@@ -624,7 +637,7 @@ void Example::hello() {
               notify("Không tìm thấy file nguồn trong source/!", "warn")
               return
             end
-            build_dir = source_dir .. "/build"
+            build_dir = project_root .. "/build"
             vim.fn.mkdir(build_dir, "p")
             binary = build_dir .. "/main"
             local include_flag = vim.fn.isdirectory(header_dir) == 1 and "-I" .. vim.fn.shellescape(header_dir) .. " " or ""
@@ -682,7 +695,7 @@ void Example::hello() {
           local binary
 
           if vim.fn.isdirectory(source_dir) == 1 then
-            binary = project_root .. "/source/build/main"
+            binary = project_root .. "/build/main"
           else
             local file = vim.fn.expand("%:p")
             local parent_dir = vim.fn.fnamemodify(file, ":h")
