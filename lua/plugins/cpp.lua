@@ -345,12 +345,25 @@ return {
         vim.cmd("startinsert")
       end
 
-      --- Kiểm tra cwd có phải OOP không (tự động hoặc theo tên thư mục)
+      --- Kiểm tra cwd hoặc buffer hiện tại có phải OOP không (tự động hoặc theo tên thư mục)
       local function is_oop_dir()
+        -- 1. Kiểm tra thư mục làm việc hiện tại (cwd)
         local cwd = vim.fn.getcwd()
         local folder_name = vim.fn.fnamemodify(cwd, ":t")
-        return folder_name == "OOP"
-          or (vim.fn.isdirectory(cwd .. "/header") == 1 and vim.fn.isdirectory(cwd .. "/source") == 1)
+        if folder_name == "OOP" or (vim.fn.isdirectory(cwd .. "/header") == 1 and vim.fn.isdirectory(cwd .. "/source") == 1) then
+          return true
+        end
+
+        -- 2. Kiểm tra thư mục dự án chứa file của buffer đang mở
+        local file = vim.fn.expand("%:p")
+        if file ~= "" then
+          local project_root = find_project_root()
+          if vim.fn.isdirectory(project_root .. "/header") == 1 and vim.fn.isdirectory(project_root .. "/source") == 1 then
+            return true
+          end
+        end
+
+        return false
       end
 
       -- ==================================================================
@@ -576,20 +589,35 @@ void Example::hello() {
               return
             end
 
-            local cwd = vim.fn.getcwd()
-            local header_dir = cwd .. "/header"
-            local source_dir = cwd .. "/source"
+            local project_root = find_project_root()
+            local header_dir = project_root .. "/header"
+            local source_dir = project_root .. "/source"
 
             if vim.fn.isdirectory(header_dir) == 0 then
               notify("Không tìm thấy header/!", "warn")
               return
             end
 
-            local display_name = class_name:sub(1, 1):upper() .. class_name:sub(2)
-            local guard = display_name:upper() .. "_H"
+            -- Hỗ trợ tạo thư mục con (ví dụ: utils/Helper)
+            class_name = class_name:gsub("\\", "/")
+            local class_dir = vim.fn.fnamemodify(class_name, ":h")
+            local bare_name = vim.fn.fnamemodify(class_name, ":t")
+            if class_dir == "." then
+              class_dir = ""
+            end
 
-            -- Header
-            local header_path = header_dir .. "/" .. display_name .. ".h"
+            local display_name = bare_name:sub(1, 1):upper() .. bare_name:sub(2)
+            local guard = (class_dir ~= "" and (class_dir:gsub("/", "_"):upper() .. "_") or "") .. display_name:upper() .. "_H"
+
+            -- Tạo thư mục con tương ứng nếu có
+            local target_header_dir = header_dir .. (class_dir ~= "" and ("/" .. class_dir) or "")
+            local target_source_dir = source_dir .. (class_dir ~= "" and ("/" .. class_dir) or "")
+            vim.fn.mkdir(target_header_dir, "p")
+            vim.fn.mkdir(target_source_dir, "p")
+
+            local header_path = target_header_dir .. "/" .. display_name .. ".h"
+            local source_path = target_source_dir .. "/" .. display_name .. ".cpp"
+
             if vim.fn.filereadable(header_path) == 1 then
               notify("File " .. display_name .. ".h đã tồn tại!", "warn")
               return
@@ -610,8 +638,7 @@ void Example::hello() {
               f:close()
             end
 
-            -- Source (cùng tên, nằm trong source/)
-            local source_path = source_dir .. "/" .. display_name .. ".cpp"
+            -- Source
             local source_content = string.format(
               '#include "%s.h"\n\n%s::%s() {\n}\n\n%s::~%s() {\n}\n',
               display_name,
@@ -626,7 +653,7 @@ void Example::hello() {
               f:close()
             end
 
-            notify("✅ Đã tạo Class: " .. display_name)
+            notify("✅ Đã tạo Class: " .. (class_dir ~= "" and (class_dir .. "/") or "") .. display_name)
 
             -- Auto mở .h + .cpp dạng split
             vim.defer_fn(function()
@@ -948,14 +975,7 @@ void Example::hello() {
 
       local oop_group = vim.api.nvim_create_augroup("OopMode", { clear = true })
 
-      vim.api.nvim_create_autocmd("VimEnter", {
-        group = oop_group,
-        callback = function()
-          vim.defer_fn(setup_oop_mode, 200)
-        end,
-      })
-
-      vim.api.nvim_create_autocmd("DirChanged", {
+      vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged", "BufEnter" }, {
         group = oop_group,
         callback = function()
           vim.defer_fn(setup_oop_mode, 200)

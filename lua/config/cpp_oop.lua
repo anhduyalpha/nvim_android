@@ -55,10 +55,23 @@ local function find_project_root()
 end
 
 local function is_oop_dir()
+  -- 1. Kiểm tra thư mục làm việc hiện tại (cwd)
   local cwd = vim.fn.getcwd()
   local folder_name = vim.fn.fnamemodify(cwd, ":t")
-  return folder_name == "OOP"
-    or (vim.fn.isdirectory(cwd .. "/header") == 1 and vim.fn.isdirectory(cwd .. "/source") == 1)
+  if folder_name == "OOP" or (vim.fn.isdirectory(cwd .. "/header") == 1 and vim.fn.isdirectory(cwd .. "/source") == 1) then
+    return true
+  end
+
+  -- 2. Kiểm tra thư mục dự án chứa file của buffer đang mở
+  local file = vim.fn.expand("%:p")
+  if file ~= "" then
+    local project_root = find_project_root()
+    if vim.fn.isdirectory(project_root .. "/header") == 1 and vim.fn.isdirectory(project_root .. "/source") == 1 then
+      return true
+    end
+  end
+
+  return false
 end
 
 local function run_in_terminal(binary, show_time)
@@ -453,8 +466,7 @@ function M.setup()
     notify("🏗️ OOP Mode đã kích hoạt trong: " .. vim.fn.getcwd())
   end
 
-  local oop_group = vim.api.nvim_create_augroup("OopMode", { clear = true })
-  vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged" }, {
+  vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged", "BufEnter" }, {
     group = oop_group,
     callback = function()
       vim.defer_fn(setup_oop_keymaps, 200)
