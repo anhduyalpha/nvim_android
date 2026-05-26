@@ -367,6 +367,36 @@ function M.setup()
       end)
     end, { desc = "Tạo Class mới", silent = true })
 
+    -- Tìm tất cả thư mục chứa file header (.h, .hpp) đệ quy để tự động detect thay vì nhập full đường dẫn
+    local function get_oop_include_flags(project_root)
+      local dirs = {}
+      -- Mặc định thêm header/ và source/ của dự án
+      local default_header = project_root .. "/header"
+      local default_source = project_root .. "/source"
+      if vim.fn.isdirectory(default_header) == 1 then
+        dirs[default_header] = true
+      end
+      if vim.fn.isdirectory(default_source) == 1 then
+        dirs[default_source] = true
+      end
+
+      -- Tìm đệ quy các thư mục chứa .h hoặc .hpp
+      local h_files = vim.fn.globpath(project_root, "/**/*.h", false, true)
+      local hpp_files = vim.fn.globpath(project_root, "/**/*.hpp", false, true)
+      for _, files in ipairs({ h_files, hpp_files }) do
+        for _, f in ipairs(files) do
+          local dir = vim.fn.fnamemodify(f, ":h")
+          dirs[dir] = true
+        end
+      end
+
+      local flags = {}
+      for d, _ in pairs(dirs) do
+        table.insert(flags, "-I" .. vim.fn.shellescape(d))
+      end
+      return table.concat(flags, " ") .. " "
+    end
+
     map("n", "<leader>ob", function()
       local root = find_project_root()
       local file = vim.fn.expand("%:p")
@@ -377,8 +407,8 @@ function M.setup()
       local std = is_c and "c17" or vim.g.cpp_std
       local flags = vim.g.cpp_flags
 
-      local pattern = is_c and "/*.c" or "/*.cpp"
-      local srcs = vim.fn.glob(root .. "/source" .. pattern, false, true)
+      local pattern = is_c and "/**/*.c" or "/**/*.cpp"
+      local srcs = vim.fn.globpath(root .. "/source", pattern, false, true)
       if #srcs == 0 then
         notify("Không tìm thấy file nguồn trong source/!", "warn")
         return
@@ -388,7 +418,7 @@ function M.setup()
       local binary = build_dir .. "/main"
       vim.fn.mkdir(build_dir, "p")
 
-      local include_flag = vim.fn.isdirectory(root .. "/header") == 1 and "-I" .. vim.fn.shellescape(root .. "/header") .. " " or ""
+      local include_flag = get_oop_include_flags(root)
       local escaped_srcs = {}
       for _, s in ipairs(srcs) do
         table.insert(escaped_srcs, vim.fn.shellescape(s))
