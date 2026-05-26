@@ -79,7 +79,8 @@ local function is_closeable()
   local bt = vim.bo.buftype
 
   -- Không đóng Snacks Explorer thông qua danh sách đóng nhanh này để xử lý riêng biệt
-  if ft:match("snacks_explorer") or ft:match("snacks_layout") then
+  -- Snacks Explorer thực tế sử dụng filetype snacks_picker_list vì bản chất là picker
+  if ft == "snacks_picker_list" or ft:match("snacks_layout") or ft:match("snacks_explorer") then
     return false
   end
 
@@ -104,7 +105,7 @@ local function get_normal_buffers()
       local bt = vim.bo[buf].buftype
       local ft = vim.bo[buf].filetype
       -- Buffer thường: buftype rỗng, không phải snacks, dashboard, alpha
-      if bt == "" and ft ~= "dashboard" and ft ~= "alpha" and not ft:match("snacks") then
+      if bt == "" and ft ~= "dashboard" and ft ~= "alpha" and ft ~= "snacks_picker_list" and not ft:match("snacks") then
         table.insert(normal_bufs, buf)
       end
     end
@@ -112,13 +113,15 @@ local function get_normal_buffers()
   return normal_bufs
 end
 
--- Lấy window đang hiển thị Snacks Explorer
+-- Lấy window đang hiển thị Snacks Explorer (chỉ tính window dạng sidebar/split thường, không tính dạng floating)
 local function get_snacks_explorer_win()
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     if vim.api.nvim_win_is_valid(win) then
       local buf = vim.api.nvim_win_get_buf(win)
       local ft = vim.bo[buf].filetype
-      if ft:match("snacks_explorer") or ft:match("snacks_layout") then
+      local config = vim.api.nvim_win_get_config(win)
+      if (ft == "snacks_picker_list" or ft:match("snacks_layout") or ft:match("snacks_explorer"))
+         and config.relative == "" then
         return win
       end
     end
@@ -127,7 +130,7 @@ local function get_snacks_explorer_win()
 end
 
 map("n", "q", function()
-  -- ① Đóng cửa sổ floating (notification, preview, etc.)
+  -- ① Đóng cửa sổ floating (notification, picker dạng floating, preview, etc.)
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     local ok, config = pcall(vim.api.nvim_win_get_config, win)
     if ok and config.relative ~= "" then
@@ -162,7 +165,7 @@ map("n", "q", function()
           local buf = vim.api.nvim_win_get_buf(win)
           local bt = vim.bo[buf].buftype
           local ft = vim.bo[buf].filetype
-          if bt == "" and ft ~= "dashboard" and ft ~= "alpha" and not ft:match("snacks") then
+          if bt == "" and ft ~= "dashboard" and ft ~= "alpha" and ft ~= "snacks_picker_list" and not ft:match("snacks") then
             target_win = win
             break
           end
@@ -177,9 +180,12 @@ map("n", "q", function()
     if #normal_bufs > 1 then
       vim.cmd("bdelete")
     else
-      -- Chỉ còn 1 buffer thường: xóa buffer và đóng cửa sổ tương ứng để chỉ còn lại sidebar explorer
+      -- Chỉ còn 1 buffer thường: xóa buffer thường
+      local cur_buf = vim.api.nvim_get_current_buf()
+      local modified = vim.bo[cur_buf].modified
       vim.cmd("bdelete")
-      if #vim.api.nvim_list_wins() > 1 then
+      -- Nếu bdelete thành công (không bị chặn do chưa lưu file) thì đóng cửa sổ thường đó để chỉ còn lại sidebar explorer
+      if not modified and #vim.api.nvim_list_wins() > 1 then
         pcall(vim.cmd, "close")
       end
     end
