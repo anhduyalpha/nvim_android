@@ -370,21 +370,26 @@ void Example::hello() {
 
         -- Đăng ký which-key cho buffer hiện tại (dùng wk.add API mới)
         wk.add({
-          { "<leader>c", group = "C++ Dev", buffer = 0 },
-          { "<leader>ct", desc = "Compile & Run", buffer = 0 },
-          { "<leader>cs", desc = "Compile & Run + Time", buffer = 0 },
-          { "<leader>cv", desc = "Compile + UBSan", buffer = 0 },
-          { "<leader>cm", desc = "Toggle Debug/Release Mode", buffer = 0 },
-          { "<leader>cx", desc = "Re-run binary", buffer = 0 },
-          { "<leader>ce", desc = "Show errors (quickfix)", buffer = 0 },
-          { "<leader>cR", desc = "Restart clangd", buffer = 0 },
+          { "c", group = "C++ Dev", buffer = 0 },
+          { "ct", desc = "Compile & Run", buffer = 0 },
+          { "cs", desc = "Compile & Run + Time", buffer = 0 },
+          { "cv", desc = "Compile + UBSan", buffer = 0 },
+          { "cm", desc = "Toggle Debug/Release Mode", buffer = 0 },
+          { "cx", desc = "Re-run binary", buffer = 0 },
+          { "ce", desc = "Show errors (quickfix)", buffer = 0 },
+          { "cR", desc = "Restart clangd", buffer = 0 },
         })
 
         -- Khởi tạo biến mode nếu chưa có
         vim.g.cpp_compile_mode = vim.g.cpp_compile_mode or "debug"
 
-        -- <leader>cm: Toggle Compile Mode (Debug / Release)
-        vim.keymap.set("n", "<leader>cm", function()
+        -- `c` mở which-key trong normal mode
+        vim.keymap.set("n", "c", function()
+          wk.show("c", { mode = "n" })
+        end, { buffer = 0, desc = "C++ Dev Leader", silent = true })
+
+        -- cm: Toggle Compile Mode (Debug / Release)
+        vim.keymap.set("n", "cm", function()
           if vim.g.cpp_compile_mode == "release" then
             vim.g.cpp_compile_mode = "debug"
             vim.g.cpp_flags = "-O0 -Wall -Wextra -Wpedantic -pipe"
@@ -396,8 +401,8 @@ void Example::hello() {
           end
         end, { buffer = 0, desc = "Toggle Debug/Release Compile Mode", silent = true })
 
-        -- <leader>ct: Compile & Run
-        vim.keymap.set("n", "<leader>ct", function()
+        -- ct: Compile & Run
+        vim.keymap.set("n", "ct", function()
           compile_current("", function(success, _, binary)
             if success then
               run_in_terminal(binary, false)
@@ -405,8 +410,8 @@ void Example::hello() {
           end)
         end, { buffer = 0, desc = "Compile & Run", silent = true })
 
-        -- <leader>cs: Compile & Run + Đo thời gian
-        vim.keymap.set("n", "<leader>cs", function()
+        -- cs: Compile & Run + Đo thời gian
+        vim.keymap.set("n", "cs", function()
           compile_current("", function(success, _, binary)
             if success then
               run_in_terminal(binary, true)
@@ -414,8 +419,8 @@ void Example::hello() {
           end)
         end, { buffer = 0, desc = "Compile & Run + Time", silent = true })
 
-        -- <leader>cv: Compile + UBSan
-        vim.keymap.set("n", "<leader>cv", function()
+        -- cv: Compile + UBSan
+        vim.keymap.set("n", "cv", function()
           compile_current("-fsanitize=undefined -fno-sanitize-recover=all", function(success, _, binary)
             if success then
               run_in_terminal(binary, false)
@@ -423,16 +428,16 @@ void Example::hello() {
           end)
         end, { buffer = 0, desc = "Compile + UBSan", silent = true })
 
-        -- <leader>cx: Re-run
-        vim.keymap.set("n", "<leader>cx", function()
+        -- cx: Re-run
+        vim.keymap.set("n", "cx", function()
           local binary = get_build_binary()
           if binary then
             run_in_terminal(binary, false)
           end
         end, { buffer = 0, desc = "Re-run binary", silent = true })
 
-        -- <leader>ce: Show errors
-        vim.keymap.set("n", "<leader>ce", function()
+        -- ce: Show errors
+        vim.keymap.set("n", "ce", function()
           local qf = vim.fn.getqflist()
           if #qf == 0 then
             notify("Không có lỗi trong quickfix list", "info")
@@ -441,8 +446,8 @@ void Example::hello() {
           end
         end, { buffer = 0, desc = "Show errors", silent = true })
 
-        -- <leader>cR: Restart clangd (khi completion bị stuck)
-        vim.keymap.set("n", "<leader>cR", function()
+        -- cR: Restart clangd (khi completion bị stuck)
+        vim.keymap.set("n", "cR", function()
           vim.cmd("LspRestart clangd")
           notify("clangd restarted")
         end, { buffer = 0, desc = "Restart clangd", silent = true })
@@ -840,6 +845,20 @@ void Example::hello() {
         group = oop_group,
         callback = function()
           vim.defer_fn(setup_oop_mode, 200)
+        end,
+      })
+
+      -- ==================================================================
+      -- AUTOCMD: TỰ ĐỘNG LƯU FILE KHI THOÁT INSERT MODE (INSERTLEAVE)
+      -- ==================================================================
+      local autosave_group = vim.api.nvim_create_augroup("InsertLeaveAutoSave", { clear = true })
+      vim.api.nvim_create_autocmd("InsertLeave", {
+        group = autosave_group,
+        pattern = { "*.c", "*.cpp", "*.h", "*.hpp" },
+        callback = function()
+          if vim.bo.modified and vim.bo.buftype == "" and vim.fn.expand("%") ~= "" then
+            vim.cmd("silent! write")
+          end
         end,
       })
     end,

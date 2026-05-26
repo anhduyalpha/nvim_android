@@ -149,20 +149,25 @@ function M.setup()
       vim.defer_fn(function()
         local wk = require("which-key")
         wk.add({
-          { "<leader>c", group = "⚡ C++ Dev", buffer = 0 },
-          { "<leader>ct", desc = "Compile & Run", buffer = 0 },
-          { "<leader>cs", desc = "Compile & Run + Time", buffer = 0 },
-          { "<leader>cv", desc = "Compile + UBSan", buffer = 0 },
-          { "<leader>cm", desc = "Toggle Debug/Release Mode", buffer = 0 },
-          { "<leader>cx", desc = "Re-run binary", buffer = 0 },
-          { "<leader>ce", desc = "Show errors (quickfix)", buffer = 0 },
+          { "c", group = "⚡ C++ Dev", buffer = 0 },
+          { "ct", desc = "Compile & Run", buffer = 0 },
+          { "cs", desc = "Compile & Run + Time", buffer = 0 },
+          { "cv", desc = "Compile + UBSan", buffer = 0 },
+          { "cm", desc = "Toggle Debug/Release Mode", buffer = 0 },
+          { "cx", desc = "Re-run binary", buffer = 0 },
+          { "ce", desc = "Show errors (quickfix)", buffer = 0 },
         })
 
         -- Khởi tạo biến mode nếu chưa có
         vim.g.cpp_compile_mode = vim.g.cpp_compile_mode or "debug"
 
-        -- <leader>cm: Toggle Compile Mode (Debug / Release)
-        vim.keymap.set("n", "<leader>cm", function()
+        -- `c` mở which-key trong normal mode
+        vim.keymap.set("n", "c", function()
+          wk.show("c", { mode = "n" })
+        end, { buffer = 0, desc = "C++ Dev Leader", silent = true })
+
+        -- cm: Toggle Compile Mode (Debug / Release)
+        vim.keymap.set("n", "cm", function()
           if vim.g.cpp_compile_mode == "release" then
             vim.g.cpp_compile_mode = "debug"
             vim.g.cpp_flags = "-O0 -Wall -Wextra -Wpedantic -pipe"
@@ -174,7 +179,7 @@ function M.setup()
           end
         end, { buffer = 0, desc = "Toggle Debug/Release Compile Mode", silent = true })
 
-        vim.keymap.set("n", "<leader>ct", function()
+        vim.keymap.set("n", "ct", function()
           compile_current("", function(success, _, binary)
             if success then
               run_in_terminal(binary, false)
@@ -182,7 +187,7 @@ function M.setup()
           end)
         end, { buffer = 0, desc = "Compile & Run", silent = true })
 
-        vim.keymap.set("n", "<leader>cs", function()
+        vim.keymap.set("n", "cs", function()
           compile_current("", function(success, _, binary)
             if success then
               run_in_terminal(binary, true)
@@ -190,7 +195,7 @@ function M.setup()
           end)
         end, { buffer = 0, desc = "Compile & Run + Time", silent = true })
 
-        vim.keymap.set("n", "<leader>cv", function()
+        vim.keymap.set("n", "cv", function()
           compile_current("-fsanitize=undefined -fno-sanitize-recover=all", function(success, _, binary)
             if success then
               run_in_terminal(binary, false)
@@ -198,14 +203,14 @@ function M.setup()
           end)
         end, { buffer = 0, desc = "Compile + UBSan", silent = true })
 
-        vim.keymap.set("n", "<leader>cx", function()
+        vim.keymap.set("n", "cx", function()
           local binary = get_build_binary()
           if binary then
             run_in_terminal(binary, false)
           end
         end, { buffer = 0, desc = "Re-run binary", silent = true })
 
-        vim.keymap.set("n", "<leader>ce", function()
+        vim.keymap.set("n", "ce", function()
           if #vim.fn.getqflist() == 0 then
             notify("Không có lỗi trong quickfix", "info")
           else
@@ -213,6 +218,18 @@ function M.setup()
           end
         end, { buffer = 0, desc = "Show errors", silent = true })
       end, 100)
+
+      -- Tự động lưu file khi thoát mode Insert
+      local autosave_group = vim.api.nvim_create_augroup("InsertLeaveAutoSaveSingle", { clear = true })
+      vim.api.nvim_create_autocmd("InsertLeave", {
+        group = autosave_group,
+        pattern = { "*.c", "*.cpp", "*.h", "*.hpp" },
+        callback = function()
+          if vim.bo.modified and vim.bo.buftype == "" and vim.fn.expand("%") ~= "" then
+            vim.cmd("silent! write")
+          end
+        end,
+      })
     end,
   })
 end

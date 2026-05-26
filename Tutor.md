@@ -1,25 +1,27 @@
-# 📘 Hướng Dẫn Cấu Hình C++ Neovim (Android / Termux)
+# 📘 Hướng Dẫn Cấu HÌnh C++ Neovim (Android / Termux)
 
 Chào mừng bạn đến với môi trường lập trình C++ siêu tối ưu dành cho thiết bị Android chạy Termux. Cấu hình này đã được tinh chỉnh toàn diện nhằm mang lại trải nghiệm **siêu mượt mà (zero lag)**, **biên dịch siêu tốc**, và **hiệu năng cực đỉnh** tương đương với PC.
 
 ---
 
 ## ⚡ 1. Chế Độ Đơn File (Single File Mode)
-Dành cho việc viết các bài tập đơn lẻ, thuật toán nhanh. Chế độ này sử dụng tổ hợp phím bắt đầu bằng `<leader>c` (Với `<leader>` mặc định là **Phím cách / Spacebar**).
+Dành cho việc viết các bài tập đơn lẻ, thuật toán nhanh. Chế độ này sử dụng tổ hợp phím tắt bắt đầu bằng phím `c` trực tiếp trong Normal Mode.
 
-> [!NOTE]
-> Phím `c` mặc định của Vim (lệnh `change`) đã được giải phóng hoàn toàn. Bạn có thể sử dụng `cw`, `cc`, `ci"` bình thường mà không bị khựng hay lag!
+> [!TIP]
+> **Biến phím `c` thành sub Which-key (Độc quyền Android)**:
+> Phím `c` trong Normal Mode của buffer C++ đã được tùy biến thành phím mở nhanh danh sách phím tắt C++ Dev. Khi gõ `c`, menu WhichKey sẽ hiện ra ngay lập tức cho phép bạn gõ tiếp ký tự chức năng cực nhanh mà không cần gõ phím leader phức tạp!
 
 ### 📊 Bảng phím tắt Single Mode:
 | Phím tắt | Chức năng | Mô tả |
 | :--- | :--- | :--- |
-| `<leader>ct` | **Compile & Run** | Biên dịch file hiện tại và chạy trực tiếp trong split terminal bên dưới. |
-| `<leader>cs` | **Compile & Run + Time** | Biên dịch và chạy kèm đo thời gian thực thi (rất có ích khi test thuật toán). |
-| `<leader>cv` | **Compile + UBSan** | Biên dịch với bộ kiểm tra lỗi tràn mảng/hành vi không xác định (Sanitizer). |
-| `<leader>cx` | **Re-run binary** | Chạy lại chương trình vừa biên dịch trước đó mà không cần compile lại (tiết kiệm thời gian). |
-| `<leader>ce` | **Show errors** | Mở cửa sổ Quickfix để xem danh sách lỗi nếu biên dịch thất bại. |
-| `<leader>cm` | **Toggle Compile Mode** | Chuyển đổi nhanh giữa chế độ **DEBUG** (Biên dịch siêu tốc) và **RELEASE** (Tối ưu hóa tối đa `-O3`). |
-| `<leader>cR` | **Restart clangd** | Khởi động lại LSP nếu tính năng gợi ý từ bị đơ hoặc treo. |
+| `c` | **Mở WhichKey** | Mở bảng phím tắt C++ Dev để chọn chức năng nhanh. |
+| `ct` | **Compile & Run** | Biên dịch file hiện tại và chạy trực tiếp trong split terminal bên dưới. |
+| `cs` | **Compile & Run + Time** | Biên dịch và chạy kèm đo thời gian thực thi (rất có ích khi test thuật toán). |
+| `cv` | **Compile + UBSan** | Biên dịch với bộ kiểm tra lỗi tràn mảng/hành vi không xác định (Sanitizer). |
+| `cx` | **Re-run binary** | Chạy lại chương trình vừa biên dịch trước đó mà không cần compile lại (tiết kiệm thời gian). |
+| `ce` | **Show errors** | Mở cửa sổ Quickfix để xem danh sách lỗi nếu biên dịch thất bại. |
+| `cm` | **Toggle Compile Mode** | Chuyển đổi nhanh giữa chế độ **DEBUG** (Biên dịch siêu tốc) và **RELEASE** (Tối ưu hóa tối đa `-O3`). |
+| `cR` | **Restart clangd** | Khởi động lại LSP nếu tính năng gợi ý từ bị đơ hoặc treo. |
 
 ---
 
@@ -41,6 +43,10 @@ Tự động kích hoạt khi bạn mở hoặc di chuyển (`cd`) vào một th
 ## 🚀 3. Các Tối Ưu Hóa Đã Được Thiết Lập (Dưới Mũi Code)
 
 Để giúp Neovim trên điện thoại mượt mà và không bị giật lag, các cấu hình sau đã được thiết lập tự động:
+
+### 💾 Tự Động Lưu khi thoát Insert Mode (Autosave on InsertLeave)
+- **Tính năng mới cực đỉnh**: Khi bạn đang ở chế độ chỉnh sửa (`Insert mode`) và quay trở lại chế độ lệnh (`Normal mode`) bằng cách nhấn `Esc` hoặc `Ctrl + [`, Neovim sẽ tự động thực hiện lưu file (`:w`) một cách lặng lẽ. 
+- Giúp loại bỏ hoàn toàn các phím bấm lưu thủ công phiền phức trên điện thoại, đồng thời đảm bảo mã nguồn của bạn luôn được lưu trữ và sẵn sàng biên dịch bất kỳ lúc nào!
 
 ### ⏱️ Không còn Lag khi Lưu (Save Lag)
 - **Cơ chế cũ**: Mỗi lần nhấn `:w`, Neovim quét toàn bộ file 70+ lần bằng regex để tự động thêm `#include <...>`. Việc này gây đơ máy khoảng 0.5s - 1s mỗi lần lưu.
