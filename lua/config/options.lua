@@ -84,19 +84,19 @@ if android.is_android() then
   vim.g.loaded_tutor_mode_plugin = 1 -- Disable tutor
 end
 
--- ── Clipboard integration for Termux ─────────────────────
+-- ── Clipboard integration for Termux (Optimized with OSC 52) ────
 if android.is_termux() then
   vim.g.clipboard = {
-    name = "termux",
+    name = "termux-osc52",
     copy = {
-      ["+"] = "termux-clipboard-set",
-      ["*"] = "termux-clipboard-set",
+      ["+"] = require("vim.ui.clipboard.osc52").copy("+"),
+      ["*"] = require("vim.ui.clipboard.osc52").copy("*"),
     },
     paste = {
       ["+"] = "termux-clipboard-get",
       ["*"] = "termux-clipboard-get",
     },
-    cache_enabled = 0,
+    cache_enabled = 1,
   }
 end
 

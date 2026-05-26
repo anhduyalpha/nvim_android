@@ -47,41 +47,59 @@ return {
       -- ── Auto-adjust Explorer width ─────────────────────
       local function adjust_explorer_width()
         for _, win in ipairs(vim.api.nvim_list_wins()) do
-          local ok, config = pcall(vim.api.nvim_win_get_config, win)
-          if not ok then
-            local buf = vim.api.nvim_win_get_buf(win)
-            local ft = vim.bo[buf].filetype
-            if ft:match("snacks") or ft == "neo-tree" then
-              -- Lấy độ rộng nội dung dài nhất
-              local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-              local max_len = 30
-              for _, line in ipairs(lines) do
-                local len = vim.fn.strdisplaywidth(line)
-                if len > max_len then
-                  max_len = len
+          if vim.api.nvim_win_is_valid(win) then
+            local ok, win_cfg = pcall(vim.api.nvim_win_get_config, win)
+            if ok and win_cfg and win_cfg.relative == "" then
+              local buf = vim.api.nvim_win_get_buf(win)
+              local ft = vim.bo[buf].filetype
+              if ft:match("snacks_explorer") or ft:match("snacks") or ft == "neo-tree" then
+                -- Lấy độ rộng nội dung dài nhất
+                local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+                local max_len = 25
+                for _, line in ipairs(lines) do
+                  local len = vim.fn.strdisplaywidth(line)
+                  if len > max_len then
+                    max_len = len
+                  end
                 end
-              end
-              -- Clamp: min 25, max 45 (hoặc 35% màn hình)
-              local screen_w = vim.o.columns
-              local max_allowed = math.floor(screen_w * 0.35)
-              max_allowed = math.max(max_allowed, 25)
-              max_allowed = math.min(max_allowed, 45)
-              local new_w = math.min(max_len + 4, max_allowed)
-              new_w = math.max(new_w, 25)
+                
+                -- Clamp: min 30, max 60 (hoặc tối đa 40% màn hình)
+                local screen_w = vim.o.columns
+                local max_allowed = math.floor(screen_w * 0.40)
+                max_allowed = math.max(max_allowed, 30)
+                max_allowed = math.min(max_allowed, 60)
+                
+                local new_w = math.min(max_len + 4, max_allowed)
+                new_w = math.max(new_w, 30)
 
-              local win_cfg = vim.api.nvim_win_get_config(win)
-              if win_cfg and win_cfg.width ~= new_w then
-                pcall(vim.api.nvim_win_set_config, win, { width = new_w })
+                local cur_w = vim.api.nvim_win_get_width(win)
+                if cur_w ~= new_w then
+                  pcall(vim.api.nvim_win_set_width, win, new_w)
+                end
               end
             end
           end
         end
       end
 
-      -- Chạy auto-adjust mỗi khi mở/buffer thay đổi
-      vim.api.nvim_create_autocmd({ "BufWinEnter", "BufWritePost", "TextChanged" }, {
+      -- Chạy auto-adjust khi mở/buffer thay đổi hoặc đổi window focus
+      local resize_group = vim.api.nvim_create_augroup("SnacksExplorerResize", { clear = true })
+      vim.api.nvim_create_autocmd({ "BufWinEnter", "BufWritePost", "TextChanged", "WinEnter" }, {
+        group = resize_group,
         callback = function()
-          vim.defer_fn(adjust_explorer_width, 50)
+          vim.defer_fn(adjust_explorer_width, 20)
+        end,
+      })
+
+      -- CursorMoved đặc biệt cho snacks_explorer để bắt kịp việc đóng mở thư mục tức thì
+      vim.api.nvim_create_autocmd("CursorMoved", {
+        group = resize_group,
+        pattern = { "*" },
+        callback = function()
+          local ft = vim.bo.filetype
+          if ft:match("snacks_explorer") or ft:match("snacks") then
+            adjust_explorer_width()
+          end
         end,
       })
     end,

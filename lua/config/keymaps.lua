@@ -131,8 +131,14 @@ map("n", "d", "dd", { noremap = true, silent = true, desc = "Delete line" })
 map("n", "D", "d$", { noremap = true, silent = true, desc = "Delete to end of line" })
 map("v", "d", "d", { noremap = true, silent = true, desc = "Delete selection" })
 
--- ─────────────────────────────────────────────
---  BONUS: Bật lại macro recording cho ai cần
---     Nhấn Ctrl+q để ghi macro (thay cho q cũ)
--- ─────────────────────────────────────────────
 map("n", "<C-q>", "q", { noremap = true, silent = true, desc = "Record macro" })
+
+-- ─────────────────────────────────────────────
+--  6. TỐI ƯU HÓA THAO TÁC SOẠN THẢO VÀ CHỌN (Normal/Visual Mode)
+-- ─────────────────────────────────────────────
+-- Chọn tất cả (Select All) bằng Ctrl+a trong Normal và Visual (x) Mode
+map({ "n", "x" }, "<C-a>", "ggVG", { desc = "Select All" })
+
+-- Giữ nguyên vùng chọn Visual khi dùng lệnh thụt lề (< và >)
+map("x", "<", "<gv", { desc = "Thụt lề trái (giữ vùng chọn)" })
+map("x", ">", ">gv", { desc = "Thụt lề phải (giữ vùng chọn)" })
