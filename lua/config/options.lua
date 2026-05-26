@@ -93,8 +93,8 @@ if android.is_termux() then
       ["*"] = require("vim.ui.clipboard.osc52").copy("*"),
     },
     paste = {
-      ["+"] = "termux-clipboard-get",
-      ["*"] = "termux-clipboard-get",
+      ["+"] = require("vim.ui.clipboard.osc52").paste("+"),
+      ["*"] = require("vim.ui.clipboard.osc52").paste("*"),
     },
     cache_enabled = 1,
   }

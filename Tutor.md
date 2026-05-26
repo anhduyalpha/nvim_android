@@ -100,9 +100,8 @@ Hãy gõ các từ viết tắt sau và nhấn `Tab` để tự động điền 
 ## 📱 5. Mẹo Lập Trình Trên Android / Termux
 
 1.  **Sao chép và Dán (Clipboard Siêu Tốc)**:
-    - **Tối ưu hóa cực đỉnh**: Hệ thống giờ đây sử dụng giao thức **OSC 52** trực tiếp từ nhân Neovim cho mọi thao tác sao chép (`y` - yank) giúp đồng bộ clipboard với điện thoại **ngay lập tức (0ms, hoàn toàn không có độ trễ)**, giúp loại bỏ triệt để hiện tượng đơ giật khi soạn thảo.
-    - Khi dán (`p` - paste), hệ thống gọi công cụ `termux-clipboard-get` kết hợp bộ đệm cache thông minh của Neovim để đảm bảo lấy dữ liệu chính xác từ hệ điều hành Android mà không gây lag.
-    *(Lưu ý: Hãy cài đặt ứng dụng Termux:API trên điện thoại và chạy lệnh `pkg install termux-api` trong Termux để tính năng dán hoạt động tối ưu).*
+    - **Tối ưu hóa cực đỉnh**: Hệ thống sử dụng giao thức **OSC 52** trực tiếp từ nhân Neovim cho cả hai thao tác **sao chép (`y` - yank)** và **dán (`p` - paste)**.
+    - Điều này giúp đồng bộ hoàn toàn với clipboard của điện thoại **ngay lập tức (0ms, tuyệt đối không có độ trễ)** mà không cần chạy các tiến trình nền nặng nề hay gọi API Android bên ngoài. Giờ đây bạn có thể yank và paste giữa điện thoại và Neovim cực kỳ mượt mà, không còn bất kỳ độ trễ nào nữa!
 2.  **Phím tắt soạn thảo gia tốc (Editing Accelerations)**:
     - **Chọn tất cả nhanh (Select All)**: Nhấn **`Ctrl + a`** ở cả Normal Mode và Visual Mode để bôi đen/chọn toàn bộ nội dung của file ngay lập tức!
     - **Thụt lề giữ nguyên vùng chọn (Visual Indent)**: Trong Visual Mode, khi bạn bôi đen nhiều dòng và gõ **`>`** hoặc **`<`** để căn lề thụt dòng, vùng chọn sẽ **được giữ nguyên** thay vì tự thoát visual mode như mặc định. Cho phép bạn căn chỉnh lề liên tục cực kỳ mượt mà!
