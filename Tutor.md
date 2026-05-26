@@ -56,8 +56,8 @@ Tự động kích hoạt khi bạn mở hoặc di chuyển (`cd`) vào một th
 - **Bảo vệ đường dẫn chứa dấu cách (Spaces in Path Protection)**: Toàn bộ lệnh biên dịch được bảo vệ bằng cơ chế `shellescape` chặt chẽ, loại bỏ hoàn toàn các lỗi crash biên dịch do đường dẫn thư mục hoặc file chứa khoảng trắng trên Android!
 
 ### 📁 Thư Mục Build Cùng Cấp (Same-Level Build)
-- **Tối ưu hóa mới**: Thư mục `build/` chứa file nhị phân đầu ra sau khi biên dịch giờ đây sẽ luôn được tự động tạo **cùng cấp (trong cùng một thư mục)** với file C/C++ đang được build (Đối với OOP Mode, file chạy sẽ nằm trong `source/build/main`).
-- Điều này giúp các dự án của bạn sạch sẽ hơn, dễ quản lý các file chạy đi kèm, và không làm rác thư mục gốc dự án!
+- **Tối ưu hóa mới**: Thư mục `build/` chứa file nhị phân đầu ra sau khi biên dịch giờ đây sẽ luôn được tự động tạo **cùng cấp (trong cùng một thư mục)** với file C/C++ đang được build (Đối với OOP Mode, thư mục `build/` sẽ nằm ngay tại thư mục gốc của dự án - project root - thay vì nằm trong thư mục nguồn `source/` để tương thích hoàn hảo với debugger GDB).
+- Điều này giúp các dự án của bạn sạch sẽ hơn, dễ quản lý các file chạy đi kèm, và không làm rác các thư mục nguồn bên trong!
 
 ### 💾 Tự Động Lưu khi thoát Insert Mode (Autosave on InsertLeave)
 - **Tính năng mới cực đỉnh**: Khi bạn đang ở chế độ chỉnh sửa (`Insert mode`) và quay trở lại chế độ lệnh (`Normal mode`) bằng cách nhấn `Esc` hoặc `Ctrl + [`, Neovim sẽ tự động thực hiện lưu file (`:w`) một cách lặng lẽ. 
