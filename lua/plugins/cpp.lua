@@ -171,20 +171,20 @@ return {
         end
       end
 
-      --- Tìm project root (có header/ và source/)
+      --- Tìm project root (có header/ và source/) - tự động chuẩn hóa dấu gạch chéo xuôi cho đa nền tảng
       local function find_project_root()
         local file = vim.fn.expand("%:p")
         if file == "" then
-          return vim.fn.getcwd()
+          return vim.fn.getcwd():gsub("\\", "/")
         end
         local dir = vim.fn.fnamemodify(file, ":h")
         while dir ~= vim.fn.fnamemodify(dir, ":h") do
           if vim.fn.isdirectory(dir .. "/header") == 1 and vim.fn.isdirectory(dir .. "/source") == 1 then
-            return dir
+            return dir:gsub("\\", "/")
           end
           dir = vim.fn.fnamemodify(dir, ":h")
         end
-        return vim.fn.getcwd()
+        return vim.fn.getcwd():gsub("\\", "/")
       end
 
       --- Lấy đường dẫn binary trong build/ (nếu là OOP project thì nằm ở thư mục project root)
@@ -205,6 +205,7 @@ return {
 
       -- Tìm tất cả thư mục chứa file header (.h, .hpp) đệ quy để tự động detect thay vì nhập full đường dẫn
       local function get_oop_include_flags(project_root)
+        project_root = project_root:gsub("\\", "/")
         local dirs = {}
         -- Mặc định thêm header/ và source/ của dự án
         local default_header = project_root .. "/header"
@@ -221,7 +222,7 @@ return {
         local hpp_files = vim.fn.globpath(project_root, "/**/*.hpp", false, true)
         for _, files in ipairs({ h_files, hpp_files }) do
           for _, f in ipairs(files) do
-            local dir = vim.fn.fnamemodify(f, ":h")
+            local dir = vim.fn.fnamemodify(f, ":h"):gsub("\\", "/")
             dirs[dir] = true
           end
         end
@@ -231,6 +232,47 @@ return {
           table.insert(flags, "-I" .. vim.fn.shellescape(d))
         end
         return table.concat(flags, " ") .. " "
+      end
+
+      -- Tự động sinh file compile_flags.txt để cấu hình cho LSP clangd nhận diện đầy đủ header
+      local function write_compile_flags_txt(project_root)
+        project_root = project_root:gsub("\\", "/")
+        local dirs = {}
+        -- Mặc định thêm header/ và source/
+        local default_header = project_root .. "/header"
+        local default_source = project_root .. "/source"
+        if vim.fn.isdirectory(default_header) == 1 then
+          dirs[default_header] = true
+        end
+        if vim.fn.isdirectory(default_source) == 1 then
+          dirs[default_source] = true
+        end
+
+        -- Tìm đệ quy các thư mục chứa .h hoặc .hpp
+        local h_files = vim.fn.globpath(project_root, "/**/*.h", false, true)
+        local hpp_files = vim.fn.globpath(project_root, "/**/*.hpp", false, true)
+        for _, files in ipairs({ h_files, hpp_files }) do
+          for _, f in ipairs(files) do
+            local dir = vim.fn.fnamemodify(f, ":h"):gsub("\\", "/")
+            dirs[dir] = true
+          end
+        end
+
+        -- Sinh nội dung compile_flags.txt
+        local lines = {
+          "-xc++",
+          "-std=c++20",
+        }
+        for d, _ in pairs(dirs) do
+          table.insert(lines, "-I" .. d)
+        end
+
+        local filepath = project_root .. "/compile_flags.txt"
+        local f = io.open(filepath, "w")
+        if f then
+          f:write(table.concat(lines, "\n") .. "\n")
+          f:close()
+        end
       end
 
       --- Compile file C/C++ hiện tại → output vào build/
@@ -249,6 +291,8 @@ return {
         local build_dir
         if is_oop then
           build_dir = project_root .. "/build"
+          -- Tạo compile_flags.txt cho clangd khi biên dịch
+          write_compile_flags_txt(project_root)
         else
           local parent_dir = vim.fn.fnamemodify(file, ":h")
           build_dir = parent_dir .. "/build"
@@ -694,6 +738,7 @@ void Example::hello() {
             build_dir = project_root .. "/build"
             vim.fn.mkdir(build_dir, "p")
             binary = build_dir .. "/main"
+            write_compile_flags_txt(project_root)
             local include_flag = get_oop_include_flags(project_root)
             local escaped_srcs = {}
             for _, s in ipairs(srcs) do
@@ -763,7 +808,11 @@ void Example::hello() {
         -- <leader>oqq: Thoát WhichKey
         vim.keymap.set("n", "<leader>oqq", "<esc>", { desc = "Thoát WhichKey", silent = true })
 
-        notify("🏗️ OOP Mode đã kích hoạt trong: " .. vim.fn.getcwd())
+        -- Tự động cập nhật compile_flags.txt cho clangd hoạt động tức thì
+        local root = find_project_root()
+        write_compile_flags_txt(root)
+
+        notify("🏗️ OOP Mode đã kích hoạt trong: " .. root)
       end
 
       -- ==================================================================
