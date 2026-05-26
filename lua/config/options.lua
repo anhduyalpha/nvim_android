@@ -14,7 +14,7 @@ vim.opt.autowrite = true -- Auto-write on certain events
 
 -- ── UI ───────────────────────────────────────────────────
 vim.opt.number = true -- Show line numbers
-vim.opt.relativenumber = true -- Relative numbers for easy navigation
+vim.opt.relativenumber = false -- Relative numbers for easy navigation
 vim.opt.cursorline = true -- Highlight current line
 vim.opt.signcolumn = "yes" -- Always show sign column
 vim.opt.termguicolors = true -- True color support

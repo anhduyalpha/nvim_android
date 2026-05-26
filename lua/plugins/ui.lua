@@ -9,10 +9,23 @@ return {
   {
     "folke/snacks.nvim",
     opts = {
-      -- Cố định độ rộng snacks explorer bằng 25
+      -- 1. Cấu hình hành vi của Explorer
       explorer = {
         replace_netrw = true,
-        width = 25,
+      },
+
+      -- 2. Cấu hình GIAO DIỆN (độ rộng) cho Explorer phải nằm trong picker
+      picker = {
+        sources = {
+          explorer = {
+            layout = {
+              layout = {
+                width = 25,
+                min_width = 25, -- Đảm bảo không bị bóp nhỏ hơn 25
+              },
+            },
+          },
+        },
       },
 
       -- Dashboard căn giữa
@@ -30,7 +43,7 @@ return {
             " ██║  ██║███████╗██║     ██║  ██║██║  ██║██████╔╝",
             " ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝",
             "",
-            "          Neovim on Android / Termux",
+            "         Neovim on Android / Termux",
             "",
           }, "\n"),
         },
