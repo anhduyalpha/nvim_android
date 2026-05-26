@@ -1,9 +1,9 @@
 local M = {}
 
--- Biến cấu hình Global
+-- Biến cấu hình Global (mặc định -O0 cho điện thoại compile nhanh)
 vim.g.cpp_compiler = vim.g.cpp_compiler or "clang++"
 vim.g.cpp_std = vim.g.cpp_std or "c++20"
-vim.g.cpp_flags = vim.g.cpp_flags or "-O2 -Wall -Wextra -Wpedantic -pipe"
+vim.g.cpp_flags = vim.g.cpp_flags or "-O0 -Wall -Wextra -Wpedantic -pipe"
 
 local function notify(msg, level)
   level = level or "info"
@@ -140,41 +140,72 @@ function M.setup()
     group = cpp_group,
     pattern = { "c", "cpp" },
     callback = function()
+      -- Cấu hình indent Visual Studio chuẩn
+      vim.opt_local.shiftwidth = 4
+      vim.opt_local.tabstop = 4
+      vim.opt_local.softtabstop = 4
+      vim.opt_local.expandtab = true
+
       vim.defer_fn(function()
         local wk = require("which-key")
-        wk.add({ { "c", group = "⚡ C++ Dev", buffer = 0 } })
+        wk.add({
+          { "<leader>c", group = "⚡ C++ Dev", buffer = 0 },
+          { "<leader>ct", desc = "Compile & Run", buffer = 0 },
+          { "<leader>cs", desc = "Compile & Run + Time", buffer = 0 },
+          { "<leader>cv", desc = "Compile + UBSan", buffer = 0 },
+          { "<leader>cm", desc = "Toggle Debug/Release Mode", buffer = 0 },
+          { "<leader>cx", desc = "Re-run binary", buffer = 0 },
+          { "<leader>ce", desc = "Show errors (quickfix)", buffer = 0 },
+        })
 
-        vim.keymap.set("n", "c", function()
-          wk.show("c", { mode = "n" })
-        end, { buffer = 0, desc = "C++ Dev Leader", silent = true })
-        vim.keymap.set("n", "ct", function()
+        -- Khởi tạo biến mode nếu chưa có
+        vim.g.cpp_compile_mode = vim.g.cpp_compile_mode or "debug"
+
+        -- <leader>cm: Toggle Compile Mode (Debug / Release)
+        vim.keymap.set("n", "<leader>cm", function()
+          if vim.g.cpp_compile_mode == "release" then
+            vim.g.cpp_compile_mode = "debug"
+            vim.g.cpp_flags = "-O0 -Wall -Wextra -Wpedantic -pipe"
+            notify("🛡️ Mode: DEBUG (-O0, Compile siêu nhanh, an toàn)")
+          else
+            vim.g.cpp_compile_mode = "release"
+            vim.g.cpp_flags = "-O3 -Wall -Wextra -Wpedantic -DNDEBUG -pipe"
+            notify("⚡ Mode: RELEASE (-O3, Tối ưu tối đa, không debug)")
+          end
+        end, { buffer = 0, desc = "Toggle Debug/Release Compile Mode", silent = true })
+
+        vim.keymap.set("n", "<leader>ct", function()
           compile_current("", function(success, _, binary)
             if success then
               run_in_terminal(binary, false)
             end
           end)
         end, { buffer = 0, desc = "Compile & Run", silent = true })
-        vim.keymap.set("n", "cs", function()
+
+        vim.keymap.set("n", "<leader>cs", function()
           compile_current("", function(success, _, binary)
             if success then
               run_in_terminal(binary, true)
             end
           end)
         end, { buffer = 0, desc = "Compile & Run + Time", silent = true })
-        vim.keymap.set("n", "cv", function()
+
+        vim.keymap.set("n", "<leader>cv", function()
           compile_current("-fsanitize=undefined -fno-sanitize-recover=all", function(success, _, binary)
             if success then
               run_in_terminal(binary, false)
             end
           end)
         end, { buffer = 0, desc = "Compile + UBSan", silent = true })
-        vim.keymap.set("n", "cr", function()
+
+        vim.keymap.set("n", "<leader>cx", function()
           local binary = get_build_binary()
           if binary then
             run_in_terminal(binary, false)
           end
         end, { buffer = 0, desc = "Re-run binary", silent = true })
-        vim.keymap.set("n", "ce", function()
+
+        vim.keymap.set("n", "<leader>ce", function()
           if #vim.fn.getqflist() == 0 then
             notify("Không có lỗi trong quickfix", "info")
           else

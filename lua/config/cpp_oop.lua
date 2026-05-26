@@ -55,7 +55,10 @@ local function find_project_root()
 end
 
 local function is_oop_dir()
-  return vim.fn.fnamemodify(vim.fn.getcwd(), ":t") == "OOP"
+  local cwd = vim.fn.getcwd()
+  local folder_name = vim.fn.fnamemodify(cwd, ":t")
+  return folder_name == "OOP"
+    or (vim.fn.isdirectory(cwd .. "/header") == 1 and vim.fn.isdirectory(cwd .. "/source") == 1)
 end
 
 local function run_in_terminal(binary, show_time)
@@ -78,7 +81,6 @@ local function run_in_terminal(binary, show_time)
   vim.cmd("startinsert")
 end
 
--- ==================== SỬA TẠI ĐÂY: CHỈ TẠO SOURCE.CPP ====================
 local function scaffold_project(project_path)
   vim.fn.mkdir(project_path .. "/header", "p")
   vim.fn.mkdir(project_path .. "/source", "p")
@@ -120,31 +122,43 @@ local symbol_to_header = {
   ["stack"] = "stack",
 }
 
+local function has_include(content, header)
+  local pattern = '#include[%s]*[<"]' .. header:gsub("%.", "%%.") .. '[>"]'
+  return content:match(pattern) ~= nil
+end
+
 local function setup_auto_include()
   local auto_group = vim.api.nvim_create_augroup("CppAutoInclude", { clear = true })
   vim.api.nvim_create_autocmd("BufWritePre", {
     group = auto_group,
     pattern = { "*.c", "*.cpp", "*.h", "*.hpp" },
     callback = function()
-      local content = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      local content = table.concat(lines, "\n")
+      
+      -- Một pass trích xuất từ (O(N)) thay vì nhiều regex scans
+      local words = {}
+      for word in content:gmatch("[a-zA-Z_][a-zA-Z0-9_]*") do
+        words[word] = true
+      end
+
       local needed = {}
       for symbol, header in pairs(symbol_to_header) do
-        if
-          content:match("[^a-zA-Z_]" .. symbol .. "[^a-zA-Z_]")
-          and not content:match('#include[%s]*[<"]' .. header .. '[>"]')
-        then
+        if words[symbol] and not has_include(content, header) then
           needed[header] = true
         end
       end
+      
       if not next(needed) then
         return
       end
+      
       local sorted, insert_line = {}, 1
       for h in pairs(needed) do
         table.insert(sorted, h)
       end
       table.sort(sorted)
-      for i, line in ipairs(vim.api.nvim_buf_get_lines(0, 0, -1, false)) do
+      for i, line in ipairs(lines) do
         if line:match("^#include") or (line:match("^#ifndef") and i <= 5) or line:match("^#pragma once") then
           insert_line = i + 1
         end
@@ -168,6 +182,21 @@ function M.setup()
       return
     end
     local map = vim.keymap.set
+    -- Khởi tạo biến mode nếu chưa có
+    vim.g.cpp_compile_mode = vim.g.cpp_compile_mode or "debug"
+
+    map("n", "<leader>om", function()
+      if vim.g.cpp_compile_mode == "release" then
+        vim.g.cpp_compile_mode = "debug"
+        vim.g.cpp_flags = "-O0 -Wall -Wextra -Wpedantic -pipe"
+        notify("🛡️ Mode: DEBUG (-O0, Compile siêu nhanh, an toàn)")
+      else
+        vim.g.cpp_compile_mode = "release"
+        vim.g.cpp_flags = "-O3 -Wall -Wextra -Wpedantic -DNDEBUG -pipe"
+        notify("⚡ Mode: RELEASE (-O3, Tối ưu tối đa, không debug)")
+      end
+    end, { desc = "Toggle Debug/Release Compile Mode", silent = true })
+
     map("n", "<leader>os", function()
       vim.ui.input({ prompt = "Tên Solution: " }, function(name)
         if not name or name == "" then
@@ -196,17 +225,14 @@ function M.setup()
       end)
     end, { desc = "Tạo Project mới", silent = true })
 
-    -- ==================== SỬA TẠI ĐÂY: TEMPLATE CLASS MỚI ====================
     map("n", "<leader>oc", function()
       vim.ui.input({ prompt = "Tên Class: " }, function(name)
         if not name or name == "" then
           return
         end
         local root = vim.fn.getcwd()
-        -- Tự động viết hoa chữ cái đầu cho tên class
         local display = name:sub(1, 1):upper() .. name:sub(2)
 
-        -- Tạo nội dung file Header (.h)
         local h_path = root .. "/header/" .. display .. ".h"
         local f = io.open(h_path, "w")
         if f then
@@ -221,7 +247,6 @@ function M.setup()
           f:close()
         end
 
-        -- Tạo nội dung file Source (.cpp)
         local cpp_path = root .. "/source/" .. display .. ".cpp"
         f = io.open(cpp_path, "w")
         if f then

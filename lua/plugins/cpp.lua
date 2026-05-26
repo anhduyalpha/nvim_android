@@ -14,12 +14,32 @@ return {
   -- ========================================================================
 
   -- LSP cho C/C++ — tối ưu cho Termux/Android
-  -- Chỉ set mason=false, config clangd sẽ dùng vim.lsp.config ở init.lua
   {
     "neovim/nvim-lspconfig",
     opts = function(_, opts)
       opts.servers = opts.servers or {}
-      opts.servers.clangd = { mason = false }
+      opts.servers.clangd = {
+        mason = false,
+        cmd = {
+          "clangd",
+          "--background-index",
+          "--background-index-priority=low",
+          "--pch-storage=memory",
+          "--completion-style=bundled",
+          "--function-arg-placeholders=true",
+          "--header-insertion=never",
+          "--limit-results=20",
+          "--clang-tidy=false",
+          "--fallback-style=llvm",
+          "-j=2",
+          "--log=error",
+        },
+        init_options = {
+          usePlaceholders = true,
+          completeUnimported = true,
+          clangdFileStatus = true,
+        },
+      }
       return opts
     end,
   },
@@ -38,8 +58,8 @@ return {
       },
       completion = {
         list = {
-          selection = { preselect = true, auto_insert = true },
-          max_items = 50,
+          selection = { preselect = true, auto_insert = false },
+          max_items = 20,
         },
         menu = {
           draw = {
@@ -51,9 +71,9 @@ return {
         },
         documentation = {
           auto_show = true,
-          auto_show_delay_ms = 300,
+          auto_show_delay_ms = 500,
         },
-        ghost_text = { enabled = true },
+        ghost_text = { enabled = false },
       },
       sources = {
         default = { "lsp", "snippets", "path", "buffer" },
@@ -98,7 +118,7 @@ return {
       -- ==================================================================
       vim.g.cpp_compiler = vim.g.cpp_compiler or "clang++"
       vim.g.cpp_std = vim.g.cpp_std or "c++20"
-      vim.g.cpp_flags = vim.g.cpp_flags or "-O2 -Wall -Wextra -Wpedantic -pipe"
+      vim.g.cpp_flags = vim.g.cpp_flags or "-O0 -Wall -Wextra -Wpedantic -pipe"
 
       -- ==================================================================
       -- HÀM TIỆN ÍCH
@@ -269,10 +289,12 @@ return {
         vim.cmd("startinsert")
       end
 
-      --- Kiểm tra cwd có phải OOP không
+      --- Kiểm tra cwd có phải OOP không (tự động hoặc theo tên thư mục)
       local function is_oop_dir()
-        local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
-        return cwd == "OOP"
+        local cwd = vim.fn.getcwd()
+        local folder_name = vim.fn.fnamemodify(cwd, ":t")
+        return folder_name == "OOP"
+          or (vim.fn.isdirectory(cwd .. "/header") == 1 and vim.fn.isdirectory(cwd .. "/source") == 1)
       end
 
       -- ==================================================================
@@ -352,18 +374,30 @@ void Example::hello() {
           { "<leader>ct", desc = "Compile & Run", buffer = 0 },
           { "<leader>cs", desc = "Compile & Run + Time", buffer = 0 },
           { "<leader>cv", desc = "Compile + UBSan", buffer = 0 },
-          { "<leader>cr", desc = "Re-run binary", buffer = 0 },
+          { "<leader>cm", desc = "Toggle Debug/Release Mode", buffer = 0 },
+          { "<leader>cx", desc = "Re-run binary", buffer = 0 },
           { "<leader>ce", desc = "Show errors (quickfix)", buffer = 0 },
           { "<leader>cR", desc = "Restart clangd", buffer = 0 },
         })
 
-        -- `c` mở which-key
-        vim.keymap.set("n", "c", function()
-          wk.show("c", { mode = "n" })
-        end, { buffer = 0, desc = "C++ Dev Leader", silent = true })
+        -- Khởi tạo biến mode nếu chưa có
+        vim.g.cpp_compile_mode = vim.g.cpp_compile_mode or "debug"
 
-        -- ct: Compile & Run
-        vim.keymap.set("n", "ct", function()
+        -- <leader>cm: Toggle Compile Mode (Debug / Release)
+        vim.keymap.set("n", "<leader>cm", function()
+          if vim.g.cpp_compile_mode == "release" then
+            vim.g.cpp_compile_mode = "debug"
+            vim.g.cpp_flags = "-O0 -Wall -Wextra -Wpedantic -pipe"
+            notify("🛡️ Mode: DEBUG (-O0, Compile siêu nhanh, an toàn)")
+          else
+            vim.g.cpp_compile_mode = "release"
+            vim.g.cpp_flags = "-O3 -Wall -Wextra -Wpedantic -DNDEBUG -pipe"
+            notify("⚡ Mode: RELEASE (-O3, Tối ưu tối đa, không debug)")
+          end
+        end, { buffer = 0, desc = "Toggle Debug/Release Compile Mode", silent = true })
+
+        -- <leader>ct: Compile & Run
+        vim.keymap.set("n", "<leader>ct", function()
           compile_current("", function(success, _, binary)
             if success then
               run_in_terminal(binary, false)
@@ -371,8 +405,8 @@ void Example::hello() {
           end)
         end, { buffer = 0, desc = "Compile & Run", silent = true })
 
-        -- cs: Compile & Run + Đo thời gian
-        vim.keymap.set("n", "cs", function()
+        -- <leader>cs: Compile & Run + Đo thời gian
+        vim.keymap.set("n", "<leader>cs", function()
           compile_current("", function(success, _, binary)
             if success then
               run_in_terminal(binary, true)
@@ -380,8 +414,8 @@ void Example::hello() {
           end)
         end, { buffer = 0, desc = "Compile & Run + Time", silent = true })
 
-        -- cv: Compile + UBSan
-        vim.keymap.set("n", "cv", function()
+        -- <leader>cv: Compile + UBSan
+        vim.keymap.set("n", "<leader>cv", function()
           compile_current("-fsanitize=undefined -fno-sanitize-recover=all", function(success, _, binary)
             if success then
               run_in_terminal(binary, false)
@@ -389,16 +423,16 @@ void Example::hello() {
           end)
         end, { buffer = 0, desc = "Compile + UBSan", silent = true })
 
-        -- cr: Re-run
-        vim.keymap.set("n", "cr", function()
+        -- <leader>cx: Re-run
+        vim.keymap.set("n", "<leader>cx", function()
           local binary = get_build_binary()
           if binary then
             run_in_terminal(binary, false)
           end
         end, { buffer = 0, desc = "Re-run binary", silent = true })
 
-        -- ce: Show errors
-        vim.keymap.set("n", "ce", function()
+        -- <leader>ce: Show errors
+        vim.keymap.set("n", "<leader>ce", function()
           local qf = vim.fn.getqflist()
           if #qf == 0 then
             notify("Không có lỗi trong quickfix list", "info")
@@ -407,8 +441,8 @@ void Example::hello() {
           end
         end, { buffer = 0, desc = "Show errors", silent = true })
 
-        -- cR: Restart clangd (khi completion bị stuck)
-        vim.keymap.set("n", "cR", function()
+        -- <leader>cR: Restart clangd (khi completion bị stuck)
+        vim.keymap.set("n", "<leader>cR", function()
           vim.cmd("LspRestart clangd")
           notify("clangd restarted")
         end, { buffer = 0, desc = "Restart clangd", silent = true })
@@ -732,12 +766,18 @@ void Example::hello() {
         group = auto_group,
         pattern = { "*.c", "*.cpp", "*.h", "*.hpp" },
         callback = function()
-          local content = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
-          local needed = {}
+          local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+          local content = table.concat(lines, "\n")
+          
+          -- Một pass trích xuất từ (O(N)) thay vì 70+ regex scans
+          local words = {}
+          for word in content:gmatch("[a-zA-Z_][a-zA-Z0-9_]*") do
+            words[word] = true
+          end
 
+          local needed = {}
           for symbol, header in pairs(symbol_to_header) do
-            local pattern = "[^a-zA-Z_]" .. symbol .. "[^a-zA-Z_]"
-            if content:match(pattern) and not has_include(content, header) then
+            if words[symbol] and not has_include(content, header) then
               needed[header] = true
             end
           end
@@ -752,7 +792,6 @@ void Example::hello() {
           end
           table.sort(sorted)
 
-          local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
           local insert_line = find_insert_line(lines)
           local insert_lines = {}
           for _, h in ipairs(sorted) do
