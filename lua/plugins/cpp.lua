@@ -544,11 +544,6 @@ return {
       -- ==================================================================
 
       local function setup_oop_mode()
-        local ft = vim.bo.filetype
-        if ft ~= "cpp" and ft ~= "c" and ft ~= "h" and ft ~= "hpp" then
-          return
-        end
-
         if not is_oop_dir() then
           return
         end
@@ -778,7 +773,11 @@ return {
         local root = find_project_root()
         write_compile_flags_txt(root)
 
-        if vim.g.oop_mode_last_notified_root ~= root then
+        local ft = vim.bo.filetype
+        local bt = vim.bo.buftype
+        local is_special = (ft == "snacks_explorer" or ft == "snacks_explorer_tree" or ft == "lazy" or ft == "mason" or bt == "nofile" or bt == "terminal" or bt == "prompt")
+
+        if not is_special and vim.g.oop_mode_last_notified_root ~= root then
           notify("🏗️ OOP Mode đã kích hoạt trong: " .. root)
           vim.g.oop_mode_last_notified_root = root
         end
