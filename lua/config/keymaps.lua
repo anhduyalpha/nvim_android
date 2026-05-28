@@ -129,7 +129,7 @@ local function get_snacks_explorer_win()
   return nil
 end
 
-map("n", "q", function()
+local function universal_quit()
   -- ① Đóng cửa sổ floating (notification, picker dạng floating, preview, etc.)
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     local ok, config = pcall(vim.api.nvim_win_get_config, win)
@@ -198,7 +198,10 @@ map("n", "q", function()
       vim.cmd("q")
     end
   end
-end, { desc = "Universal Quit (Prioritized buffers before Snacks Explorer)" })
+end
+
+map("n", "q", universal_quit, { desc = "Universal Quit (Prioritized buffers before Snacks Explorer)" })
+map("n", "<C-q>", universal_quit, { desc = "Universal Quit / Close Buffer" })
 
 -- ─────────────────────────────────────────────
 --  5. d  -  UNIVERSAL DELETE
@@ -211,7 +214,7 @@ map("n", "d", "dd", { noremap = true, silent = true, desc = "Delete line" })
 map("n", "D", "d$", { noremap = true, silent = true, desc = "Delete to end of line" })
 map("v", "d", "d", { noremap = true, silent = true, desc = "Delete selection" })
 
-map("n", "<C-q>", "q", { noremap = true, silent = true, desc = "Record macro" })
+map("n", "<C-g>", "q", { noremap = true, silent = true, desc = "Record macro (C-g)" })
 
 -- ─────────────────────────────────────────────
 --  6. TỐI ƯU HÓA THAO TÁC SOẠN THẢO VÀ CHỌN (Normal/Visual Mode)
