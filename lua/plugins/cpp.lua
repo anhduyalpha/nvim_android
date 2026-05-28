@@ -424,37 +424,7 @@ return {
         vim.fn.mkdir(project_path .. "/source", "p")
 
         local files = {
-          ["/source/source.cpp"] = [[#include <iostream>
-#include "example.h"
-
-int main() {
-    Example obj;
-    obj.hello();
-    return 0;
-}
-]],
-          ["/header/example.h"] = [[#ifndef EXAMPLE_H
-#define EXAMPLE_H
-
-class Example {
-public:
-    Example();
-    ~Example();
-    void hello();
-};
-
-#endif // EXAMPLE_H
-]],
-          ["/source/example.cpp"] = [[#include "example.h"
-#include <iostream>
-
-Example::Example() {}
-Example::~Example() {}
-
-void Example::hello() {
-    std::cout << "Hello from Example!" << std::endl;
-}
-]],
+          ["/source/source.cpp"] = '#include <iostream>\n\nusing namespace std;\n\nint main() {\n    cout << "Hello OOP!" << endl;\n    return 0;\n}\n',
         }
 
         for rel_path, content in pairs(files) do
@@ -465,13 +435,10 @@ void Example::hello() {
           end
         end
 
-        -- Auto mở source.cpp + header/example.h dạng split
+        -- Auto mở source.cpp
         vim.defer_fn(function()
           local source_file = project_path .. "/source/source.cpp"
-          local header_file = project_path .. "/header/example.h"
           vim.cmd("edit " .. source_file)
-          vim.cmd("vsplit " .. header_file)
-          vim.cmd("wincmd h") -- focus vào source.cpp
         end, 100)
       end
 
@@ -577,6 +544,11 @@ void Example::hello() {
       -- ==================================================================
 
       local function setup_oop_mode()
+        local ft = vim.bo.filetype
+        if ft ~= "cpp" and ft ~= "c" and ft ~= "h" and ft ~= "hpp" then
+          return
+        end
+
         if not is_oop_dir() then
           return
         end

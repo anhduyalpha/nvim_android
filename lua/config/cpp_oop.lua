@@ -287,6 +287,11 @@ function M.setup()
   setup_auto_include()
 
   local function setup_oop_keymaps()
+    local ft = vim.bo.filetype
+    if ft ~= "cpp" and ft ~= "c" and ft ~= "h" and ft ~= "hpp" then
+      return
+    end
+
     if not is_oop_dir() then
       return
     end
