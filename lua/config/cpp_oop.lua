@@ -349,9 +349,7 @@ function M.setup()
         if f then
           f:write(
             string.format(
-              "#pragma once\n#include <iostream>\n\nusing namespace std;\n\nclass %s {\nprivate:\n\npublic:\n    %s();\n    ~%s();\n};\n",
-              display,
-              display,
+              "#pragma once\n\nclass %s\n{\n};\n",
               display
             )
           )
@@ -363,11 +361,7 @@ function M.setup()
         if f then
           f:write(
             string.format(
-              '#include "%s.h"\n\n%s::%s() {\n    // Constructor\n}\n\n%s::~%s() {\n    // Destructor\n}\n',
-              display,
-              display,
-              display,
-              display,
+              '#include "%s.h"\n',
               display
             )
           )
@@ -414,6 +408,10 @@ function M.setup()
     -- Tự động sinh file compile_flags.txt để cấu hình cho LSP clangd nhận diện đầy đủ header
     local function write_compile_flags_txt(project_root)
       project_root = project_root:gsub("\\", "/")
+      local root_name = vim.fn.fnamemodify(project_root, ":t"):lower()
+      if root_name == "oop" then
+        return
+      end
       local dirs = {}
       -- Mặc định thêm header/ và source/
       local default_header = project_root .. "/header"
@@ -510,9 +508,13 @@ function M.setup()
     local root = find_project_root()
     write_compile_flags_txt(root)
 
-    notify("🏗️ OOP Mode đã kích hoạt trong: " .. root)
+    if vim.g.oop_mode_last_notified_root ~= root then
+      notify("🏗️ OOP Mode đã kích hoạt trong: " .. root)
+      vim.g.oop_mode_last_notified_root = root
+    end
   end
 
+  local oop_group = vim.api.nvim_create_augroup("OopMode", { clear = true })
   vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged", "BufEnter" }, {
     group = oop_group,
     callback = function()

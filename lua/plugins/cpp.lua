@@ -237,6 +237,10 @@ return {
       -- Tự động sinh file compile_flags.txt để cấu hình cho LSP clangd nhận diện đầy đủ header
       local function write_compile_flags_txt(project_root)
         project_root = project_root:gsub("\\", "/")
+        local root_name = vim.fn.fnamemodify(project_root, ":t"):lower()
+        if root_name == "oop" then
+          return
+        end
         local dirs = {}
         -- Mặc định thêm header/ và source/
         local default_header = project_root .. "/header"
@@ -651,7 +655,6 @@ void Example::hello() {
             end
 
             local display_name = bare_name:sub(1, 1):upper() .. bare_name:sub(2)
-            local guard = (class_dir ~= "" and (class_dir:gsub("/", "_"):upper() .. "_") or "") .. display_name:upper() .. "_H"
 
             -- Tạo thư mục con tương ứng nếu có
             local target_header_dir = header_dir .. (class_dir ~= "" and ("/" .. class_dir) or "")
@@ -668,13 +671,8 @@ void Example::hello() {
             end
 
             local header_content = string.format(
-              "#ifndef %s\n#define %s\n\nclass %s {\npublic:\n    %s();\n    ~%s();\n\nprivate:\n\n};\n\n#endif // %s\n",
-              guard,
-              guard,
-              display_name,
-              display_name,
-              display_name,
-              guard
+              "#pragma once\n\nclass %s\n{\n};\n",
+              display_name
             )
             local f = io.open(header_path, "w")
             if f then
@@ -684,11 +682,7 @@ void Example::hello() {
 
             -- Source
             local source_content = string.format(
-              '#include "%s.h"\n\n%s::%s() {\n}\n\n%s::~%s() {\n}\n',
-              display_name,
-              display_name,
-              display_name,
-              display_name,
+              '#include "%s.h"\n',
               display_name
             )
             f = io.open(source_path, "w")
@@ -812,7 +806,10 @@ void Example::hello() {
         local root = find_project_root()
         write_compile_flags_txt(root)
 
-        notify("🏗️ OOP Mode đã kích hoạt trong: " .. root)
+        if vim.g.oop_mode_last_notified_root ~= root then
+          notify("🏗️ OOP Mode đã kích hoạt trong: " .. root)
+          vim.g.oop_mode_last_notified_root = root
+        end
       end
 
       -- ==================================================================
