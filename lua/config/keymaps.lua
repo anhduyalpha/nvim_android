@@ -222,3 +222,21 @@ map({ "n", "x" }, "<C-a>", "ggVG", { desc = "Select All" })
 -- Giữ nguyên vùng chọn Visual khi dùng lệnh thụt lề (< và >)
 map("x", "<", "<gv", { desc = "Thụt lề trái (giữ vùng chọn)" })
 map("x", ">", ">gv", { desc = "Thụt lề phải (giữ vùng chọn)" })
+
+-- ─────────────────────────────────────────────
+--  7. HỖ TRỢ DI CHUYỂN CỬA SỔ (Alt+Shift+Arrows)
+-- ─────────────────────────────────────────────
+map("n", "<M-S-Left>", "<C-w>h", { desc = "Navigate to left window" })
+map("n", "<M-S-Right>", "<C-w>l", { desc = "Navigate to right window" })
+map("n", "<M-S-Up>", "<C-w>k", { desc = "Navigate to upper window" })
+map("n", "<M-S-Down>", "<C-w>j", { desc = "Navigate to lower window" })
+
+-- ─────────────────────────────────────────────
+--  8. DI CHUYỂN DÒNG & KHỐI CODE (Alt+Up/Down)
+-- ─────────────────────────────────────────────
+map("n", "<M-Down>", "<cmd>m .+1<cr>==", { desc = "Move line down" })
+map("n", "<M-Up>", "<cmd>m .-2<cr>==", { desc = "Move line up" })
+map("i", "<M-Down>", "<esc><cmd>m .+1<cr>==gi", { desc = "Move line down" })
+map("i", "<M-Up>", "<esc><cmd>m .-2<cr>==gi", { desc = "Move line up" })
+map("x", "<M-Down>", ":m '>+1<cr>gv=gv", { desc = "Move block down" })
+map("x", "<M-Up>", ":m '<-2<cr>gv=gv", { desc = "Move block up" })

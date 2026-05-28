@@ -105,6 +105,8 @@ Hãy gõ các từ viết tắt sau và nhấn `Tab` để tự động điền 
 2.  **Phím tắt soạn thảo gia tốc (Editing Accelerations)**:
     - **Chọn tất cả nhanh (Select All)**: Nhấn **`Ctrl + a`** ở cả Normal Mode và Visual Mode để bôi đen/chọn toàn bộ nội dung của file ngay lập tức!
     - **Thụt lề giữ nguyên vùng chọn (Visual Indent)**: Trong Visual Mode, khi bạn bôi đen nhiều dòng và gõ **`>`** hoặc **`<`** để căn lề thụt dòng, vùng chọn sẽ **được giữ nguyên** thay vì tự thoát visual mode như mặc định. Cho phép bạn căn chỉnh lề liên tục cực kỳ mượt mà!
+    - **Di chuyển giữa các cửa sổ cực nhanh (Window Navigation)**: Nhấn tổ hợp phím **`Alt + Shift + các phím mũi tên (Trái/Phải/Lên/Xuống)`** để nhảy nhanh tiêu điểm con trỏ giữa các phân tách màn hình (split windows) mà không cần nhấn tổ hợp `Ctrl + w` phức tạp!
+    - **Đẩy dòng hoặc khối mã (Move Lines/Blocks)**: Nhấn tổ hợp phím **`Alt + Mũi tên Lên/Xuống`** (ở cả Normal, Insert và Visual Mode) để đẩy nhanh dòng code hiện tại hoặc khối code đang chọn di chuyển lên trên hoặc xuống dưới vô cùng chuyên nghiệp và tiện lợi!
 3.  **Sử dụng Chuột/Touch**:
     Nhấn chạm vào màn hình để di chuyển con trỏ, kéo vuốt để cuộn trang, hoặc nhấn chạm vào các tab/split để chuyển nhanh khu vực làm việc rất tiện lợi.
 4.  **Bàn phím ảo**:
