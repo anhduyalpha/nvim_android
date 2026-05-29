@@ -104,3 +104,15 @@ end
 -- <leader>c is reserved for C++ keymaps (defined in ftplugin/cpp.lua)
 vim.g.lazyvim_keys_lsp = false
 vim.g.lazyvim_keys_code = false
+
+-- ── Diagnostics Optimization (Android-tuned, No Lag during Insert Mode) ──
+vim.diagnostic.config({
+  underline = true,
+  virtual_text = {
+    spacing = 4,
+    source = "if_many",
+    prefix = "●",
+  },
+  severity_sort = true,
+  update_in_insert = false, -- Never lag while typing!
+})

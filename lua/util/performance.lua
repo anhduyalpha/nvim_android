@@ -5,6 +5,12 @@ local M = {}
 
 local android = require("util.android")
 
+-- Tối ưu hóa bộ dọn rác LuaJIT GC cho Android (Giảm tối đa micro-stutter/giật khi gõ)
+if android.is_android() then
+  collectgarbage("setpause", 100)
+  collectgarbage("setstepmul", 400)
+end
+
 --- Get current Neovim startup time (requires --startuptime flag)
 ---@return number|nil startup_ms
 function M.get_startup_time()

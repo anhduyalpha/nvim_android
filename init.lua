@@ -24,3 +24,8 @@ vim.lsp.config("clangd", {
 })
 
 require("config.lazy")
+
+-- Tự động kích hoạt tối ưu hóa hiệu năng & giám sát bộ nhớ
+pcall(function()
+  require("util.performance").setup_monitor()
+end)

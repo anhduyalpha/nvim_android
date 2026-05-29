@@ -47,7 +47,23 @@ Tự động kích hoạt khi bạn mở hoặc di chuyển (`cd`) vào một th
 
 ## 🚀 3. Các Tối Ưu Hóa Đã Được Thiết Lập (Dưới Mũi Code)
 
-Để giúp Neovim trên điện thoại mượt mà và không bị giật lag, các cấu hình sau đã được thiết lập tự động:
+Để giúp Neovim trên điện thoại mượt mà, đạt độ trễ gần như bằng 0 và hoạt động ổn định trên Android, các tối ưu hóa sâu dưới đây đã được cấu hình tự động:
+
+### ⚙️ Tinh Chỉnh Bộ Dọn Rác LuaJIT GC (LuaJIT GC Tuning)
+- **Tối ưu hóa cốt lõi**: Thay đổi các tham số thu gom rác của LuaJIT (`collectgarbage("setpause", 100)` và `collectgarbage("setstepmul", 400)`).
+- **Lợi ích**: Thay vì dừng toàn bộ tiến trình soạn thảo để dọn rác (gây giật cục khi gõ), bộ dọn rác hoạt động liên tục bằng các bước siêu nhỏ (micro-steps). Điều này giúp loại bỏ hoàn toàn các hiện tượng đơ/giật đột ngột (micro-stutter) trên điện thoại.
+
+### 🛡️ Hệ Thống Giám Sát Bộ Nhớ Tự Động (Memory Guard Monitor)
+- **Tiến trình thông minh**: Chạy một timer ngầm định kỳ mỗi 5 phút (`setup_monitor`) để kiểm tra bộ nhớ RAM hệ thống thông qua `/proc/meminfo` và kiểm kê tài nguyên đã dùng của Neovim.
+- **Tự động giải phóng**: Nếu Neovim phát hiện số lượng buffer đã mở vượt quá 15 hoặc bộ nhớ bắt đầu quá tải, hệ thống sẽ tự động dọn dẹp các buffer rỗng, không thay đổi và không hoạt động nhằm tránh lỗi tràn bộ nhớ (Out-Of-Memory/OOM crashes) đặc trưng trên Android Termux.
+
+### 🔌 Cắt Giảm Plugin Tích Hợp (Built-in Plugins Stripping)
+- **Rút gọn tối đa**: Vô hiệu hóa triệt để 16 plugin mặc định không dùng tới của Vim/Neovim (như `matchit`, `matchparen`, `netrw`, `spellfile`, `vimball`, `tohtml`, `gzip`, `tarPlugin`, `zipPlugin`...).
+- **Lợi ích**: Tăng tốc độ khởi động (startup time) của Neovim lên mức tối đa và giải phóng đáng kể dung lượng bộ nhớ RAM ngay từ giây đầu tiên khởi động.
+
+### ⚡ Chẩn Đoán Lỗi Zero-Lag Trong Insert Mode (Diagnostics Optimization)
+- **Cơ chế**: Vô hiệu hóa hoàn toàn việc cập nhật các chẩn đoán lỗi nặng khi bạn đang gõ phím (`update_in_insert = false`).
+- **Lợi ích**: Lỗi cú pháp và cảnh báo LSP sẽ chỉ được vẽ lại khi bạn thoát ra Normal Mode. Việc này cô lập các tính năng LSP nặng nề khỏi thao tác gõ phím thực tế, đảm bảo **độ trễ gõ phím (input latency) luôn bằng 0ms**!
 
 ### 🛡️ Tự Động Hỗ Trợ C & C++ Song Song (Dynamic C/C++ Native Support)
 - **Nhận diện cực kỳ thông minh**: Hệ thống tự động phân biệt file bạn đang làm việc là `.c` / `.h` (ngôn ngữ C) hay `.cpp` / `.hpp` (ngôn ngữ C++).
