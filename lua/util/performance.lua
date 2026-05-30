@@ -72,11 +72,37 @@ function M.cleanup_buffers()
   end
 end
 
+--- Intelligent OOM prevention routine
+---@param force boolean|nil
+function M.prevent_oom(force)
+  local lua_mem = collectgarbage("count") / 1024
+  
+  -- Force collection or if usage is above 35MB
+  if force or lua_mem > 35 then
+    collectgarbage("collect")
+    
+    -- Cleanup hidden unused buffers if memory is still high
+    local current_mem = collectgarbage("count") / 1024
+    if current_mem > 30 then
+      M.cleanup_buffers()
+    end
+    
+    if force then
+      pcall(vim.notify, "🧹 Force collected Neovim garbage!", vim.log.levels.INFO, { title = "Memory Guard" })
+    else
+      pcall(vim.notify, string.format("🧹 Memory Guard: Auto-collected %.1fMB garbage!", lua_mem - current_mem), vim.log.levels.WARN, { title = "Memory Guard" })
+    end
+  end
+end
+
 --- Optimize settings based on current system state
 function M.auto_optimize()
   if not android.is_android() then
     return
   end
+
+  -- Run memory OOM preventer
+  M.prevent_oom()
 
   -- Check memory and warn if low
   android.notify_low_memory()
