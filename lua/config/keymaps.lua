@@ -104,9 +104,12 @@ local function get_normal_buffers()
     if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buflisted then
       local bt = vim.bo[buf].buftype
       local ft = vim.bo[buf].filetype
-      -- Buffer thường: buftype rỗng, không phải snacks, dashboard, alpha
+      local name = vim.api.nvim_buf_get_name(buf)
+      -- Buffer thường thực sự: phải có tên tệp hoặc đang bị sửa đổi (unnamed file đang sửa)
       if bt == "" and ft ~= "dashboard" and ft ~= "alpha" and ft ~= "snacks_picker_list" and not ft:match("snacks") then
-        table.insert(normal_bufs, buf)
+        if name ~= "" or vim.bo[buf].modified then
+          table.insert(normal_bufs, buf)
+        end
       end
     end
   end
@@ -157,104 +160,47 @@ local function universal_quit()
     return
   end
 
-  -- ④ Đóng buffer thường hoặc Snacks Explorer theo thứ tự ưu tiên
-  local explorer_win = get_snacks_explorer_win()
+  -- ④ Đóng buffer thường trước. Khi trên màn hình không còn buffer mới đóng snacks explorer.
   local normal_bufs = get_normal_buffers()
+  local explorer_win = get_snacks_explorer_win()
 
-  if explorer_win and #normal_bufs > 0 then
-    -- Snacks Explorer và buffer thường đang mở đồng thời
-    if cur_win == explorer_win then
-      -- Nếu đang focus ở Snacks Explorer: tự động focus sang window buffer thường trước khi xóa
-      local target_win = nil
-      for _, win in ipairs(vim.api.nvim_list_wins()) do
-        if win ~= explorer_win and vim.api.nvim_win_is_valid(win) then
-          local buf = vim.api.nvim_win_get_buf(win)
-          local bt = vim.bo[buf].buftype
-          local ft = vim.bo[buf].filetype
-          if bt == "" and ft ~= "dashboard" and ft ~= "alpha" and ft ~= "snacks_picker_list" and not ft:match("snacks") then
-            target_win = win
-            break
-          end
-        end
-      end
-      if target_win then
-        vim.api.nvim_set_current_win(target_win)
-      end
+  if #normal_bufs > 0 then
+    -- Còn buffer thường trên màn hình -> Tiến hành đóng buffer thường đang active
+    local cur_buf = vim.api.nvim_get_current_buf()
+    local ft = vim.bo[cur_buf].filetype
+    local bt = vim.bo[cur_buf].buftype
+
+    -- Nếu chúng ta đang ở Snacks Explorer nhưng vẫn còn buffer thường, phím q trong Snacks Explorer đóng chính nó
+    if ft == "snacks_picker_list" or ft:match("snacks_layout") or ft:match("snacks_explorer") or ft:match("snacks") then
+      pcall(function()
+        Snacks.explorer.close()
+      end)
+      return
     end
 
-    -- Xóa buffer thường đang hiển thị
-    if #normal_bufs > 1 then
-      vim.cmd("bdelete")
-    else
-      -- Chỉ còn 1 buffer thường: xóa buffer thường
-      local cur_buf = vim.api.nvim_get_current_buf()
-      local modified = vim.bo[cur_buf].modified
-      vim.cmd("bdelete")
-      -- Nếu bdelete thành công (không bị chặn do chưa lưu file) thì đóng cửa sổ thường đó để chỉ còn lại sidebar explorer
-      if not modified and #vim.api.nvim_list_wins() > 1 then
-        pcall(vim.cmd, "close")
+    -- Đóng buffer thường đang active (lưu nếu có thay đổi)
+    if bt == "" and ft ~= "dashboard" and ft ~= "alpha" then
+      if vim.bo[cur_buf].modified then
+        pcall(vim.cmd, "write")
       end
+      pcall(vim.cmd, "bdelete")
+    else
+      pcall(vim.cmd, "bdelete")
     end
   else
-    -- Không có sự kết hợp đồng thời (hoặc chỉ có explorer, hoặc chỉ có buffer thường)
-    local listed = vim.fn.getbufinfo({ buflisted = 1 })
-    if #listed > 1 then
-      vim.cmd("bdelete")
+    -- Không còn buffer thường nào trên màn hình -> Đóng Snacks Explorer nếu đang mở
+    if explorer_win then
+      pcall(function()
+        Snacks.explorer.close()
+      end)
     else
+      -- Không còn gì khác -> Quit Neovim
       vim.cmd("q")
     end
   end
 end
 
-local function save_and_close_buffer()
-  -- ① Đóng cửa sổ floating hiện tại nếu đang focus ở đó (notification, picker dạng floating, preview, etc.)
-  local cur_win = vim.api.nvim_get_current_win()
-  local ok, config = pcall(vim.api.nvim_win_get_config, cur_win)
-  if ok and config.relative ~= "" then
-    local cur_buf = vim.api.nvim_win_get_buf(cur_win)
-    local ft = vim.bo[cur_buf].filetype
-    -- Nếu đang ở trong Snacks Explorer/picker/layout, đóng sạch
-    if ft == "snacks_picker_list" or ft:match("snacks_layout") or ft:match("snacks_explorer") or ft:match("snacks") then
-      pcall(function()
-        Snacks.explorer.close()
-      end)
-    else
-      pcall(vim.api.nvim_win_close, cur_win, true)
-    end
-    return
-  end
-
-  -- ② Nếu là buffer đặc biệt (help, man, quickfix, lsp, etc.) thì đóng nhanh
-  if is_closeable() then
-    pcall(vim.cmd, "close")
-    return
-  end
-
-  local cur_buf = vim.api.nvim_get_current_buf()
-  local ft = vim.bo[cur_buf].filetype
-  local bt = vim.bo[cur_buf].buftype
-
-  -- Không đóng Snacks Explorer trực tiếp ở đây unless we are in it (handled in step ① or below for safety splits)
-  if ft == "snacks_picker_list" or ft:match("snacks_layout") or ft:match("snacks_explorer") or ft:match("snacks") then
-    pcall(function()
-      Snacks.explorer.close()
-    end)
-    return
-  end
-
-  -- ③ Nếu là buffer thường (buftype rỗng) thì tự động lưu nếu có thay đổi và đóng buffer
-  if bt == "" and ft ~= "dashboard" and ft ~= "alpha" then
-    if vim.bo[cur_buf].modified then
-      pcall(vim.cmd, "write")
-    end
-    pcall(vim.cmd, "bdelete")
-  else
-    pcall(vim.cmd, "bdelete")
-  end
-end
-
 map("n", "q", universal_quit, { desc = "Universal Quit (Prioritized buffers before Snacks Explorer)" })
-map("n", "<C-q>", save_and_close_buffer, { desc = "Save and Close Buffer" })
 map("n", "<C-x>", "<cmd>close<cr>", { noremap = true, silent = true, desc = "Close active window" })
 
 -- ─────────────────────────────────────────────

@@ -209,13 +209,13 @@ local function check_map(mode, lhs, expected_rhs_pattern, is_callback)
   return "MISSING"
 end
 
--- 1. Ctrl+q (Lưu và đóng buffer)
-local cq_status, cq_val = check_map("n", "<C-q>", "", true)
-if cq_status == "OK_CALLBACK" then
-  print(string.format("  %s[✓] <Ctrl+q>: ĐẠT (Được gán chính xác để Lưu & Đóng buffer)%s", colors.green, colors.reset))
+-- 1. q (Universal Quit & Close Buffer)
+local q_status, q_val = check_map("n", "q", "", true)
+if q_status == "OK_CALLBACK" then
+  print(string.format("  %s[✓] <q>: ĐẠT (Được gán chính xác để Đóng buffer & Universal Quit)%s", colors.green, colors.reset))
 else
-  print(string.format("  %s[✗] <Ctrl+q>: THẤT BẠI (%s)%s", colors.red, cq_status == "MISMATCH" and "Bị gán sai thành: " .. cq_val or "Chưa cấu hình", colors.reset))
-  table.insert(issues, "Phím tắt <Ctrl + q> chưa được gán chính xác tới hàm save_and_close_buffer trong lua/config/keymaps.lua.")
+  print(string.format("  %s[✗] <q>: THẤT BẠI (%s)%s", colors.red, q_status == "MISMATCH" and "Bị gán sai thành: " .. q_val or "Chưa cấu hình", colors.reset))
+  table.insert(issues, "Phím tắt <q> chưa được gán chính xác tới hàm universal_quit trong lua/config/keymaps.lua.")
 end
 
 -- 2. Ctrl+x (Đóng cửa sổ split)
