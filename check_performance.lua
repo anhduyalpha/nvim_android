@@ -129,6 +129,11 @@ print(string.format("  • RAM khả dụng (Available): %s%s%s", colors.bold, m
 local lua_mem = collectgarbage("count") / 1024
 print(string.format("  • RAM Neovim Lua đang dùng: %s%.2f MB%s", colors.bold, lua_mem, colors.reset))
 
+-- Đo lường hiệu năng khởi động Neovim (Startup Latency Telemetry)
+local startup_time = vim.g.startuptime or "N/A"
+print(string.format("  • Startup latency telemetry: %s%s%s", colors.bold, tostring(startup_time), colors.reset))
+
+
 -- ─────────────────────────────────────────────────────────────────────────────
 --  2. KIỂM TRA CÁC THIẾT LẬP TỐI ƯU HIỆU NĂNG CỐT LÕI
 -- ─────────────────────────────────────────────────────────────────────────────
