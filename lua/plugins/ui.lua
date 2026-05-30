@@ -88,7 +88,17 @@ return {
         },
       })
 
-      -- Rút gọn mode cho mobile
+      -- RAM Telemetry Component
+      local function ram_indicator()
+        local lua_mem = collectgarbage("count") / 1024
+        if lua_mem > 30 then
+          return string.format("⚠️ RAM: %.1fMB", lua_mem)
+        else
+          return string.format("📱 RAM: %.1fMB", lua_mem)
+        end
+      end
+
+      -- Rút gọn mode cho mobile + add RAM indicator
       opts.sections = vim.tbl_deep_extend("force", opts.sections or {}, {
         lualine_a = {
           {
@@ -108,6 +118,9 @@ return {
             end,
             padding = { left = 1, right = 1 },
           },
+        },
+        lualine_z = {
+          { ram_indicator },
         },
       })
     end,
