@@ -11,10 +11,13 @@ local report = {}
 local issues = {}
 local warnings = {}
 
--- Nếu chạy trực tiếp từ thư mục dự án và chưa load config, tự động load các file cấu hình cục bộ để phân tích
-if not vim.g.lazyvim_keys_lsp then
+-- Kiểm tra xem có đang thực sự chạy trên Android/Termux hay không
+local is_real_android = vim.fn.has("android") == 1 or vim.fn.executable("termux-setup-storage") == 1 or vim.fn.getenv("TERMUX_VERSION") ~= vim.NIL
+
+-- Chỉ load cấu hình giả lập nếu chạy trên PC để kiểm thử phát triển, trên Android thực tế bắt buộc nạp cấu hình gốc
+if not is_real_android then
   pcall(function()
-    -- Giả lập các package bổ trợ để tránh lỗi import và test cấu hình Android mượt mà
+    -- Giả lập các package bổ trợ để test cấu hình Android mượt mà trên PC
     package.loaded["util.android"] = {
       is_android = function() return true end,
       is_termux = function() return true end,
@@ -36,7 +39,20 @@ if not vim.g.lazyvim_keys_lsp then
       data = { client_id = 999 }
     })
   end)
+else
+  -- Chạy trên thiết bị Android Termux thực tế: Load cấu hình gốc để phân tích chuẩn xác 100%
+  pcall(function()
+    if not package.loaded["config.lazy"] then
+      local init_path = "init.lua"
+      local f = io.open(init_path, "r")
+      if f then
+        f:close()
+        pcall(dofile, init_path)
+      end
+    end
+  end)
 end
+
 
 -- Màu sắc terminal dạng ANSI
 local colors = {
