@@ -382,4 +382,62 @@ vim.api.nvim_create_autocmd("CursorHold", {
   end
 })
 
+-- Floating Interactive C++ & Mobile Guide
+local function show_cpp_mobile_help()
+  local buf = vim.api.nvim_create_buf(false, true)
+  local border_lines = {
+    " 📘 HƯỚNG DẪN DEV C++ & PHÍM TẮT TRÊN ANDROID (TERMUX) ",
+    "======================================================",
+    " 1. PHÍM TẮT SOẠN THẢO DI ĐỘNG (Normal Mode):",
+    "   • <leader>z : Mở Menu hành động nhanh cảm ứng.",
+    "   • Ctrl + q  : Lưu và đóng buffer hiện tại.",
+    "   • Ctrl + x  : Đóng cửa sổ split active.",
+    "   • Tab       : Thụt dòng (Visual: giữ vùng chọn).",
+    "   • Alt + Up/Down: Di chuyển dòng code lên/xuống.",
+    "   • Alt + Trái/Phải: Chuyển nhanh giữa các buffer.",
+    " ",
+    " 2. DEV C++ CHUYÊN NGHIỆP (Nhấn 'c' trong file .cpp):",
+    "   • ct : Biên dịch & Chạy mã nguồn trong Terminal.",
+    "   • cs : Biên dịch & Chạy mã nguồn + Đo thời gian.",
+    "   • cv : Biên dịch với UBSan phát hiện lỗi bộ nhớ.",
+    "   • cm : Chuyển đổi giữa chế độ Debug và Release.",
+    "   • cx : Chạy lại binary đã biên dịch gần nhất.",
+    "   • ce : Hiển thị bảng lỗi biên dịch (Quickfix).",
+    "   • cR : Khởi động lại máy chủ gợi ý clangd Stuck.",
+    " ",
+    " 3. SAO LƯU HỆ THỐNG AN TOÀN:",
+    "   • :NvimBackup : Tạo tệp sao lưu .zip cực nhanh.",
+    "   • Chạy ./backup_recovery.sh để khôi phục cấu hình.",
+    "======================================================",
+    "                 [ Nhấn q để đóng ]",
+  }
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, border_lines)
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].filetype = "help"
+
+  local width = 56
+  local height = #border_lines
+  local row = math.floor((vim.o.lines - height) / 2)
+  local col = math.floor((vim.o.columns - width) / 2)
+
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    style = "minimal",
+    border = "rounded",
+  })
+  
+  -- Close with 'q'
+  vim.keymap.set("n", "q", function()
+    pcall(vim.api.nvim_win_close, win, true)
+  end, { buffer = buf, silent = true })
+end
+
+-- Bind <leader>h to trigger C++ mobile guide
+map("n", "<leader>h", show_cpp_mobile_help, { desc = "C++ Mobile Guide" })
+
+
 
