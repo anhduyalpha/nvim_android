@@ -326,3 +326,44 @@ vim.api.nvim_create_autocmd("LspAttach", {
     vim.keymap.set("n", "<leader>cr", vim.lsp.buf.rename, vim.tbl_extend("force", opts, { desc = "LSP: Rename Symbol" }))
   end,
 })
+
+-- Touch-Friendly C++ & Mobile Quick Action Menu
+local function open_mobile_action_menu()
+  local items = {
+    "1. LSP: Goto Definition (gd)",
+    "2. LSP: References (gr)",
+    "3. LSP: Code Actions (<leader>ca)",
+    "4. LSP: Rename Symbol (<leader>cr)",
+    "5. Format Document (ClangFormat)",
+    "6. Run Diagnostic Check",
+    "7. Trigger Config Backup",
+  }
+  vim.ui.select(items, {
+    prompt = "📱 Mobile Quick Action Menu:",
+  }, function(choice)
+    if not choice then return end
+    if choice:match("1.") then
+      vim.lsp.buf.definition()
+    elseif choice:match("2.") then
+      vim.lsp.buf.references()
+    elseif choice:match("3.") then
+      vim.lsp.buf.code_action()
+    elseif choice:match("4.") then
+      vim.lsp.buf.rename()
+    elseif choice:match("5.") then
+      vim.lsp.buf.format({ async = true })
+    elseif choice:match("6.") then
+      vim.cmd("!./check_performance.sh")
+    elseif choice:match("7.") then
+      vim.cmd("NvimBackup")
+    end
+  end)
+end
+
+-- Bind <leader>z as the universal touch-menu shortcut
+map("n", "<leader>z", open_mobile_action_menu, { desc = "Mobile Action Menu" })
+
+-- Touch/Swipe gesture shortcuts (simulate swiping left/right in bufferline)
+map("n", "<M-Left>", "<cmd>bprevious<cr>", { silent = true, desc = "Previous Buffer" })
+map("n", "<M-Right>", "<cmd>bnext<cr>", { silent = true, desc = "Next Buffer" })
+
