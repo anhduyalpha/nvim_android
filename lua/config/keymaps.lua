@@ -266,6 +266,12 @@ map({ "n", "x" }, "<C-a>", "ggVG", { desc = "Select All" })
 map("x", "<", "<gv", { desc = "Thụt lề trái (giữ vùng chọn)" })
 map("x", ">", ">gv", { desc = "Thụt lề phải (giữ vùng chọn)" })
 
+-- Thụt lề nhanh bằng Tab / Shift-Tab trong Normal và Visual (x) Mode
+map("n", "<Tab>", ">>", { noremap = true, silent = true, desc = "Indent line" })
+map("n", "<S-Tab>", "<<", { noremap = true, silent = true, desc = "De-indent line" })
+map("x", "<Tab>", ">gv", { noremap = true, silent = true, desc = "Indent block (keep selection)" })
+map("x", "<S-Tab>", "<gv", { noremap = true, silent = true, desc = "De-indent block (keep selection)" })
+
 -- ─────────────────────────────────────────────
 --  7. HỖ TRỢ DI CHUYỂN CỬA SỔ (Alt+Shift+Arrows)
 -- ─────────────────────────────────────────────
