@@ -1043,6 +1043,33 @@ return {
           end
         end,
       })
+
+      -- ==================================================================
+      -- AUTOCMD: CẤU HÌNH TERMINAL (TỰ ĐỘNG CHUYỂN NORMAL MODE & CTRL+C ĐỂ ĐÓNG)
+      -- ==================================================================
+      local term_group = vim.api.nvim_create_augroup("TerminalConfig", { clear = true })
+      
+      -- Khi terminal được mở (TermOpen): Tắt line numbers và gán phím Ctrl+c để đóng split
+      vim.api.nvim_create_autocmd("TermOpen", {
+        group = term_group,
+        callback = function(args)
+          vim.opt_local.number = false
+          vim.opt_local.relativenumber = false
+          
+          -- Gán phím Ctrl+c trong terminal (cả normal mode và terminal-insert mode) để đóng nhanh terminal
+          vim.keymap.set("t", "<C-c>", [[<C-\><C-n><cmd>bdelete!<cr>]], { buffer = args.buf, silent = true, desc = "Close terminal split" })
+          vim.keymap.set("n", "<C-c>", [[<cmd>bdelete!<cr>]], { buffer = args.buf, silent = true, desc = "Close terminal split" })
+        end,
+      })
+
+      -- Khi terminal kết thúc chạy (TermClose): Tự động chuyển sang Normal mode để xem kết quả
+      vim.api.nvim_create_autocmd("TermClose", {
+        group = term_group,
+        callback = function()
+          vim.cmd("stopinsert")
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, true, true), "n", true)
+        end,
+      })
     end,
   },
 }
