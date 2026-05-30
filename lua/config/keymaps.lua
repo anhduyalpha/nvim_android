@@ -367,3 +367,19 @@ map("n", "<leader>z", open_mobile_action_menu, { desc = "Mobile Action Menu" })
 map("n", "<M-Left>", "<cmd>bprevious<cr>", { silent = true, desc = "Previous Buffer" })
 map("n", "<M-Right>", "<cmd>bnext<cr>", { silent = true, desc = "Next Buffer" })
 
+-- Auto-open diagnostic detail popup on cursor hold
+vim.api.nvim_create_autocmd("CursorHold", {
+  callback = function()
+    local opts = {
+      focusable = false,
+      close_events = { "BufLeave", "CursorMoved", "InsertEnter", "FocusLost" },
+      border = "rounded",
+      source = "always",
+      prefix = " ",
+      scope = "cursor",
+    }
+    vim.diagnostic.open_float(nil, opts)
+  end
+})
+
+

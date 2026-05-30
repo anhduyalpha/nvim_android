@@ -126,4 +126,11 @@ vim.diagnostic.config({
   },
   severity_sort = true,
   update_in_insert = false, -- Never lag while typing!
+  float = {
+    border = "rounded",
+    source = "always",
+    header = "",
+    prefix = "",
+  },
 })
+
