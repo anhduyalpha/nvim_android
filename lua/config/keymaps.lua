@@ -277,9 +277,46 @@ map("n", "<M-S-Down>", "<C-w>j", { desc = "Navigate to lower window" })
 -- ─────────────────────────────────────────────
 --  8. DI CHUYỂN DÒNG & KHỐI CODE (Alt+Up/Down)
 -- ─────────────────────────────────────────────
-map("n", "<M-Down>", "<cmd>m .+1<cr>==", { desc = "Move line down" })
-map("n", "<M-Up>", "<cmd>m .-2<cr>==", { desc = "Move line up" })
-map("i", "<M-Down>", "<esc><cmd>m .+1<cr>==gi", { desc = "Move line down" })
-map("i", "<M-Up>", "<esc><cmd>m .-2<cr>==gi", { desc = "Move line up" })
-map("x", "<M-Down>", ":m '>+1<cr>gv=gv", { desc = "Move block down" })
-map("x", "<M-Up>", ":m '<-2<cr>gv=gv", { desc = "Move block up" })
+map("n", "<M-Down>", "<cmd>silent! m .+1<cr>==", { desc = "Move line down" })
+map("n", "<M-Up>", "<cmd>silent! m .-2<cr>==", { desc = "Move line up" })
+map("i", "<M-Down>", "<esc><cmd>silent! m .+1<cr>==gi", { desc = "Move line down" })
+map("i", "<M-Up>", "<esc><cmd>silent! m .-2<cr>==gi", { desc = "Move line up" })
+map("x", "<M-Down>", ":silent! m '>+1<cr>gv=gv", { desc = "Move block down" })
+map("x", "<M-Up>", ":silent! m '<-2<cr>gv=gv", { desc = "Move block up" })
+
+-- ─────────────────────────────────────────────
+--  9. LSP NAVIGATIONS (gd, gr, K, etc.) - Tự động kích hoạt khi có LSP
+-- ─────────────────────────────────────────────
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("UserGlobalLspConfig", { clear = true }),
+  callback = function(args)
+    local opts = { buffer = args.buf, silent = true }
+    
+    -- gd: Đi tới định nghĩa (Goto Definition)
+    vim.keymap.set("n", "gd", vim.lsp.buf.definition, vim.tbl_extend("force", opts, { desc = "LSP: Goto Definition" }))
+    
+    -- gD: Đi tới khai báo (Goto Declaration)
+    vim.keymap.set("n", "gD", vim.lsp.buf.declaration, vim.tbl_extend("force", opts, { desc = "LSP: Goto Declaration" }))
+    
+    -- gr: Tìm các tham chiếu (Goto References)
+    vim.keymap.set("n", "gr", vim.lsp.buf.references, vim.tbl_extend("force", opts, { desc = "LSP: Goto References" }))
+    
+    -- gI: Đi tới triển khai (Goto Implementation)
+    vim.keymap.set("n", "gI", vim.lsp.buf.implementation, vim.tbl_extend("force", opts, { desc = "LSP: Goto Implementation" }))
+    
+    -- gy: Đi tới định nghĩa kiểu (Goto Type Definition)
+    vim.keymap.set("n", "gy", vim.lsp.buf.type_definition, vim.tbl_extend("force", opts, { desc = "LSP: Goto Type Definition" }))
+    
+    -- K: Hiển thị tài liệu/hover (Hover Documentation)
+    vim.keymap.set("n", "K", vim.lsp.buf.hover, vim.tbl_extend("force", opts, { desc = "LSP: Hover Documentation" }))
+    
+    -- gK: Hiển thị chữ ký hàm (Signature Help)
+    vim.keymap.set("n", "gK", vim.lsp.buf.signature_help, vim.tbl_extend("force", opts, { desc = "LSP: Signature Help" }))
+    
+    -- <leader>ca: Code Action
+    vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, vim.tbl_extend("force", opts, { desc = "LSP: Code Action" }))
+    
+    -- <leader>cr: Rename Symbol
+    vim.keymap.set("n", "<leader>cr", vim.lsp.buf.rename, vim.tbl_extend("force", opts, { desc = "LSP: Rename Symbol" }))
+  end,
+})
