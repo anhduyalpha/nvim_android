@@ -297,6 +297,14 @@ return {
           f:write(table.concat(lines, "\n") .. "\n")
           f:close()
         end
+
+        -- Tự động sinh file .clangd để vô hiệu hóa hoàn toàn clang-tidy
+        local clangd_path = project_root .. "/.clangd"
+        local cf = io.open(clangd_path, "w")
+        if cf then
+          cf:write("Diagnostics:\n  ClangTidy:\n    Remove: [\"*\"]\n")
+          cf:close()
+        end
       end
 
       --- Compile file C/C++ hiện tại → output vào build/
