@@ -11,6 +11,22 @@ local report = {}
 local issues = {}
 local warnings = {}
 
+local log_lines = {}
+local original_print = print
+local function print(...)
+  local args = { ... }
+  local strings = {}
+  for i = 1, #args do
+    table.insert(strings, tostring(args[i]))
+  end
+  local str = table.concat(strings, "\t")
+  original_print(str)
+
+  -- Loại bỏ mã màu ANSI bằng bộ lọc regex để lưu tệp tin text sạch sẽ dễ đọc/cat
+  local clean_str = str:gsub("\27%[[%d;]*%a", "")
+  table.insert(log_lines, clean_str)
+end
+
 -- Kiểm tra xem có đang thực sự chạy trên Android/Termux hay không
 local is_real_android = vim.fn.has("android") == 1 or vim.fn.executable("termux-setup-storage") == 1 or vim.fn.getenv("TERMUX_VERSION") ~= vim.NIL
 
@@ -296,3 +312,12 @@ else
   print("  • Đảm bảo tệp lua/config/keymaps.lua đã được load đúng trong init.lua.")
 end
 print(colors.bold .. colors.cyan .. "\n======================================================================" .. colors.reset .. "\n")
+
+-- Tự động lưu toàn bộ báo cáo không màu vào tệp tin performance_report.txt
+local f = io.open("performance_report.txt", "w")
+if f then
+  f:write(table.concat(log_lines, "\n") .. "\n")
+  f:close()
+  original_print(colors.bold .. colors.green .. "💾 Báo cáo hiệu năng đã được tự động lưu vào tệp: performance_report.txt" .. colors.reset)
+  original_print(colors.cyan .. "   Bạn có thể chạy 'cat performance_report.txt' để gửi lỗi cho Antigravity fix!" .. colors.reset .. "\n")
+end
