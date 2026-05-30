@@ -130,13 +130,20 @@ local function get_snacks_explorer_win()
 end
 
 local function universal_quit()
-  -- ① Đóng cửa sổ floating (notification, picker dạng floating, preview, etc.)
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    local ok, config = pcall(vim.api.nvim_win_get_config, win)
-    if ok and config.relative ~= "" then
-      pcall(vim.api.nvim_win_close, win, true)
-      return
+  -- ① Đóng cửa sổ floating hiện tại nếu đang focus ở đó (notification, picker dạng floating, preview, etc.)
+  local cur_win = vim.api.nvim_get_current_win()
+  local ok, config = pcall(vim.api.nvim_win_get_config, cur_win)
+  if ok and config.relative ~= "" then
+    local cur_buf = vim.api.nvim_win_get_buf(cur_win)
+    local ft = vim.bo[cur_buf].filetype
+    if ft == "snacks_picker_list" or ft:match("snacks_layout") or ft:match("snacks_explorer") or ft:match("snacks") then
+      pcall(function()
+        Snacks.explorer.close()
+      end)
+    else
+      pcall(vim.api.nvim_win_close, cur_win, true)
     end
+    return
   end
 
   -- ② Dismiss Snacks notifier (nếu có)
@@ -156,7 +163,6 @@ local function universal_quit()
 
   if explorer_win and #normal_bufs > 0 then
     -- Snacks Explorer và buffer thường đang mở đồng thời
-    local cur_win = vim.api.nvim_get_current_win()
     if cur_win == explorer_win then
       -- Nếu đang focus ở Snacks Explorer: tự động focus sang window buffer thường trước khi xóa
       local target_win = nil
@@ -201,13 +207,21 @@ local function universal_quit()
 end
 
 local function save_and_close_buffer()
-  -- ① Đóng cửa sổ floating trước (nếu có)
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    local ok, config = pcall(vim.api.nvim_win_get_config, win)
-    if ok and config.relative ~= "" then
-      pcall(vim.api.nvim_win_close, win, true)
-      return
+  -- ① Đóng cửa sổ floating hiện tại nếu đang focus ở đó (notification, picker dạng floating, preview, etc.)
+  local cur_win = vim.api.nvim_get_current_win()
+  local ok, config = pcall(vim.api.nvim_win_get_config, cur_win)
+  if ok and config.relative ~= "" then
+    local cur_buf = vim.api.nvim_win_get_buf(cur_win)
+    local ft = vim.bo[cur_buf].filetype
+    -- Nếu đang ở trong Snacks Explorer/picker/layout, đóng sạch
+    if ft == "snacks_picker_list" or ft:match("snacks_layout") or ft:match("snacks_explorer") or ft:match("snacks") then
+      pcall(function()
+        Snacks.explorer.close()
+      end)
+    else
+      pcall(vim.api.nvim_win_close, cur_win, true)
     end
+    return
   end
 
   -- ② Nếu là buffer đặc biệt (help, man, quickfix, lsp, etc.) thì đóng nhanh
@@ -220,8 +234,8 @@ local function save_and_close_buffer()
   local ft = vim.bo[cur_buf].filetype
   local bt = vim.bo[cur_buf].buftype
 
-  -- Không đóng Snacks Explorer trực tiếp ở đây
-  if ft == "snacks_picker_list" or ft:match("snacks_layout") or ft:match("snacks_explorer") then
+  -- Không đóng Snacks Explorer trực tiếp ở đây unless we are in it (handled in step ① or below for safety splits)
+  if ft == "snacks_picker_list" or ft:match("snacks_layout") or ft:match("snacks_explorer") or ft:match("snacks") then
     pcall(function()
       Snacks.explorer.close()
     end)
