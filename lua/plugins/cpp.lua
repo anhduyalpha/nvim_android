@@ -298,11 +298,11 @@ return {
           f:close()
         end
 
-        -- Tự động sinh file .clangd để vô hiệu hóa hoàn toàn clang-tidy
+        -- Tự động sinh file .clangd để vô hiệu hóa hoàn toàn clang-tidy và cảnh báo UnusedIncludes
         local clangd_path = project_root .. "/.clangd"
         local cf = io.open(clangd_path, "w")
         if cf then
-          cf:write("Diagnostics:\n  ClangTidy:\n    Remove: [\"*\"]\n")
+          cf:write("Diagnostics:\n  ClangTidy:\n    Remove: [\"*\"]\n  UnusedIncludes: None\n")
           cf:close()
         end
       end
