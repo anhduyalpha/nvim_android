@@ -112,10 +112,24 @@ else
   is_termux = vim.fn.getenv("TERMUX_VERSION") ~= vim.NIL or is_android
 end
 
+-- Kiểm tra xem thư mục chạy chẩn đoán có khớp với thư mục config của Neovim hay không
+local config_path = vim.fn.stdpath("config"):gsub("\\", "/"):lower()
+local cwd_path = vim.fn.getcwd():gsub("\\", "/"):lower()
+local is_path_mismatch = false
+
+if is_android and config_path ~= cwd_path then
+  is_path_mismatch = true
+  table.insert(warnings, string.format("Bạn đang chạy chẩn đoán từ thư mục '%s',\n     nhưng Neovim thực tế đang sử dụng cấu hình tại '%s'.\n     👉 Khuyên dùng: Liên kết thư mục dự án này tới ~/.config/nvim bằng lệnh:\n     rm -rf ~/.config/nvim && ln -s %s ~/.config/nvim", cwd_path, config_path, cwd_path))
+end
+
 print(string.format("  • Hệ điều hành: %s%s%s", 
   colors.bold, is_android and "Android" or "Hệ điều hành khác (PC/Linux)", colors.reset))
 print(string.format("  • Môi trường Termux: %s%s%s", 
   colors.bold, is_termux and "Đúng (Termux)" or "Không (Hoặc giả lập/PC)", colors.reset))
+
+if is_path_mismatch then
+  print(string.format("  %s[⚠] Cảnh báo đường dẫn: Thư mục chạy hiện tại (%s) KHÔNG KHỚP với thư mục cấu hình Neovim thực tế (%s). Các thay đổi mới có thể chưa được đồng bộ sang ~/.config/nvim!%s", colors.yellow, cwd_path, config_path, colors.reset))
+end
 
 -- Đọc dung lượng bộ nhớ
 local mem_total = "N/A"
