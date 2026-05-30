@@ -200,8 +200,48 @@ local function universal_quit()
   end
 end
 
+local function save_and_close_buffer()
+  -- ① Đóng cửa sổ floating trước (nếu có)
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local ok, config = pcall(vim.api.nvim_win_get_config, win)
+    if ok and config.relative ~= "" then
+      pcall(vim.api.nvim_win_close, win, true)
+      return
+    end
+  end
+
+  -- ② Nếu là buffer đặc biệt (help, man, quickfix, lsp, etc.) thì đóng nhanh
+  if is_closeable() then
+    pcall(vim.cmd, "close")
+    return
+  end
+
+  local cur_buf = vim.api.nvim_get_current_buf()
+  local ft = vim.bo[cur_buf].filetype
+  local bt = vim.bo[cur_buf].buftype
+
+  -- Không đóng Snacks Explorer trực tiếp ở đây
+  if ft == "snacks_picker_list" or ft:match("snacks_layout") or ft:match("snacks_explorer") then
+    pcall(function()
+      Snacks.explorer.close()
+    end)
+    return
+  end
+
+  -- ③ Nếu là buffer thường (buftype rỗng) thì tự động lưu nếu có thay đổi và đóng buffer
+  if bt == "" and ft ~= "dashboard" and ft ~= "alpha" then
+    if vim.bo[cur_buf].modified then
+      pcall(vim.cmd, "write")
+    end
+    pcall(vim.cmd, "bdelete")
+  else
+    pcall(vim.cmd, "bdelete")
+  end
+end
+
 map("n", "q", universal_quit, { desc = "Universal Quit (Prioritized buffers before Snacks Explorer)" })
-map("n", "<C-q>", universal_quit, { desc = "Universal Quit / Close Buffer" })
+map("n", "<C-q>", save_and_close_buffer, { desc = "Save and Close Buffer" })
+map("n", "<C-x>", "<cmd>close<cr>", { noremap = true, silent = true, desc = "Close active window" })
 
 -- ─────────────────────────────────────────────
 --  5. d  -  UNIVERSAL DELETE
