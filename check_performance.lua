@@ -30,44 +30,23 @@ end
 -- Kiểm tra xem có đang thực sự chạy trên Android/Termux hay không
 local is_real_android = vim.fn.has("android") == 1 or vim.fn.executable("termux-setup-storage") == 1 or vim.fn.getenv("TERMUX_VERSION") ~= vim.NIL
 
--- Chỉ load cấu hình giả lập nếu chạy trên PC để kiểm thử phát triển, trên Android thực tế bắt buộc nạp cấu hình gốc
-if not is_real_android then
-  pcall(function()
-    -- Giả lập các package bổ trợ để test cấu hình Android mượt mà trên PC
+-- Tự động nạp các tệp cấu hình cục bộ để phân tích chính xác trong môi trường headless
+pcall(function()
+  -- Nếu chạy trên PC (kiểm thử phát triển), giả lập package util.android
+  if not is_real_android then
     package.loaded["util.android"] = {
       is_android = function() return true end,
       is_termux = function() return true end,
       get_platform_settings = function() return { update_time = 1000, undo_levels = 100 } end,
       notify_low_memory = function() end
     }
-    
-    -- Load các file cấu hình cục bộ theo thứ tự chuẩn
-    dofile("lua/config/options.lua")
-    dofile("lua/config/keymaps.lua")
-    
-    -- Đăng ký mock lspconfig và require các tệp liên quan
-    package.loaded["util.performance"] = dofile("lua/util/performance.lua")
-    
-    -- Giả lập LspAttach event để kích hoạt UserGlobalLspConfig autocommand và đăng ký keymaps
-    vim.api.nvim_exec_autocmds("LspAttach", {
-      group = "UserGlobalLspConfig",
-      buffer = vim.api.nvim_get_current_buf(),
-      data = { client_id = 999 }
-    })
-  end)
-else
-  -- Chạy trên thiết bị Android Termux thực tế: Load cấu hình gốc để phân tích chuẩn xác 100%
-  pcall(function()
-    if not package.loaded["config.lazy"] then
-      local init_path = "init.lua"
-      local f = io.open(init_path, "r")
-      if f then
-        f:close()
-        pcall(dofile, init_path)
-      end
-    end
-  end)
-end
+  end
+
+  -- Nạp các tệp tin cấu hình cục bộ từ dự án
+  dofile("lua/config/options.lua")
+  dofile("lua/config/keymaps.lua")
+  package.loaded["util.performance"] = dofile("lua/util/performance.lua")
+end)
 
 
 -- Màu sắc terminal dạng ANSI
@@ -184,9 +163,9 @@ else
 end
 
 -- D. Disable Heavy Built-ins (RTP)
-local matchparen_loaded = vim.g.loaded_matchparen == 1
-local netrw_loaded = vim.g.loaded_netrwPlugin == nil
-if matchparen_loaded and netrw_loaded then
+local matchparen_disabled = vim.g.loaded_matchparen == 1
+local netrw_disabled = vim.g.loaded_netrwPlugin == 1
+if matchparen_disabled and netrw_disabled then
   print(string.format("  %s[✓] Cắt giảm Built-in Plugins: ĐẠT (Đã vô hiệu hóa các plugin mặc định nặng nề)%s", colors.green, colors.reset))
 else
   print(string.format("  %s[⚠] Cắt giảm Built-in Plugins: CHƯA TRIỆT ĐỂ (Vẫn đang chạy một số plugin mặc định nặng)%s", colors.yellow, colors.reset))

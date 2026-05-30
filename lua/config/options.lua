@@ -82,6 +82,17 @@ if android.is_android() then
   vim.g.loaded_spellfile_plugin = 1 -- Disable spellfile plugin
   vim.g.loaded_2html_plugin = 1 -- Disable 2html plugin
   vim.g.loaded_tutor_mode_plugin = 1 -- Disable tutor
+  vim.g.loaded_netrw = 1 -- Disable netrw
+  vim.g.loaded_netrwPlugin = 1 -- Disable netrwPlugin
+  vim.g.loaded_gzip = 1 -- Disable gzip
+  vim.g.loaded_tarPlugin = 1 -- Disable tarPlugin
+  vim.g.loaded_zipPlugin = 1 -- Disable zipPlugin
+  vim.g.loaded_getscript = 1 -- Disable getscript
+  vim.g.loaded_getscriptPlugin = 1 -- Disable getscriptPlugin
+  vim.g.loaded_vimball = 1 -- Disable vimball
+  vim.g.loaded_vimballPlugin = 1 -- Disable vimballPlugin
+  vim.g.loaded_logipat = 1 -- Disable logipat
+  vim.g.loaded_rrhelper = 1 -- Disable rrhelper
 end
 
 -- ── Clipboard integration for Termux (Optimized with OSC 52) ────
