@@ -208,6 +208,7 @@ return {
   -- ═══════════════════════════════════════════════
   {
     "b0o/incline.nvim",
+    enabled = not require("util.android").is_android(),
     event = "VeryLazy",
     dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function()

@@ -171,20 +171,30 @@ return {
         end
       end
 
+      local project_root_cache = {}
+      local is_oop_cache = {}
+
       --- Tìm project root (có header/ và source/) - tự động chuẩn hóa dấu gạch chéo xuôi cho đa nền tảng
       local function find_project_root()
         local file = vim.fn.expand("%:p")
         if file == "" then
           return vim.fn.getcwd():gsub("\\", "/")
         end
+        if project_root_cache[file] then
+          return project_root_cache[file]
+        end
         local dir = vim.fn.fnamemodify(file, ":h")
         while dir ~= vim.fn.fnamemodify(dir, ":h") do
           if vim.fn.isdirectory(dir .. "/header") == 1 and vim.fn.isdirectory(dir .. "/source") == 1 then
-            return dir:gsub("\\", "/")
+            local res = dir:gsub("\\", "/")
+            project_root_cache[file] = res
+            return res
           end
           dir = vim.fn.fnamemodify(dir, ":h")
         end
-        return vim.fn.getcwd():gsub("\\", "/")
+        local res = vim.fn.getcwd():gsub("\\", "/")
+        project_root_cache[file] = res
+        return res
       end
 
       --- Lấy đường dẫn binary trong build/ (nếu là OOP project thì nằm ở thư mục project root)
@@ -217,13 +227,18 @@ return {
           dirs[default_source] = true
         end
 
-        -- Tìm đệ quy các thư mục chứa .h hoặc .hpp
-        local h_files = vim.fn.globpath(project_root, "/**/*.h", false, true)
-        local hpp_files = vim.fn.globpath(project_root, "/**/*.hpp", false, true)
-        for _, files in ipairs({ h_files, hpp_files }) do
-          for _, f in ipairs(files) do
-            local dir = vim.fn.fnamemodify(f, ":h"):gsub("\\", "/")
-            dirs[dir] = true
+        -- Tìm đệ quy các thư mục chứa .h hoặc .hpp trong header/ và source/ (tránh quét toàn bộ project root để không quét .git hay build/)
+        local search_paths = { project_root .. "/header", project_root .. "/source" }
+        for _, path in ipairs(search_paths) do
+          if vim.fn.isdirectory(path) == 1 then
+            local h_files = vim.fn.globpath(path, "/**/*.h", false, true)
+            local hpp_files = vim.fn.globpath(path, "/**/*.hpp", false, true)
+            for _, files in ipairs({ h_files, hpp_files }) do
+              for _, f in ipairs(files) do
+                local dir = vim.fn.fnamemodify(f, ":h"):gsub("\\", "/")
+                dirs[dir] = true
+              end
+            end
           end
         end
 
@@ -252,13 +267,18 @@ return {
           dirs[default_source] = true
         end
 
-        -- Tìm đệ quy các thư mục chứa .h hoặc .hpp
-        local h_files = vim.fn.globpath(project_root, "/**/*.h", false, true)
-        local hpp_files = vim.fn.globpath(project_root, "/**/*.hpp", false, true)
-        for _, files in ipairs({ h_files, hpp_files }) do
-          for _, f in ipairs(files) do
-            local dir = vim.fn.fnamemodify(f, ":h"):gsub("\\", "/")
-            dirs[dir] = true
+        -- Tìm đệ quy các thư mục chứa .h hoặc .hpp trong header/ và source/
+        local search_paths = { project_root .. "/header", project_root .. "/source" }
+        for _, path in ipairs(search_paths) do
+          if vim.fn.isdirectory(path) == 1 then
+            local h_files = vim.fn.globpath(path, "/**/*.h", false, true)
+            local hpp_files = vim.fn.globpath(path, "/**/*.hpp", false, true)
+            for _, files in ipairs({ h_files, hpp_files }) do
+              for _, f in ipairs(files) do
+                local dir = vim.fn.fnamemodify(f, ":h"):gsub("\\", "/")
+                dirs[dir] = true
+              end
+            end
           end
         end
 
@@ -405,10 +425,13 @@ return {
         -- 2. Kiểm tra thư mục dự án chứa file của buffer đang mở
         local file = vim.fn.expand("%:p")
         if file ~= "" then
-          local project_root = find_project_root()
-          if vim.fn.isdirectory(project_root .. "/header") == 1 and vim.fn.isdirectory(project_root .. "/source") == 1 then
-            return true
+          if is_oop_cache[file] ~= nil then
+            return is_oop_cache[file]
           end
+          local project_root = find_project_root()
+          local res = vim.fn.isdirectory(project_root .. "/header") == 1 and vim.fn.isdirectory(project_root .. "/source") == 1
+          is_oop_cache[file] = res
+          return res
         end
 
         return false
@@ -769,9 +792,9 @@ return {
         -- <leader>oqq: Thoát WhichKey
         vim.keymap.set("n", "<leader>oqq", "<esc>", { desc = "Thoát WhichKey", silent = true })
 
-        -- Tự động cập nhật compile_flags.txt cho clangd hoạt động tức thì
+        -- Tự động cập nhật compile_flags.txt cho clangd hoạt động tức thì (chỉ khi thực sự compile/build hoặc tạo class mới)
         local root = find_project_root()
-        write_compile_flags_txt(root)
+        -- Đã lược bỏ lệnh write_compile_flags_txt(root) ở đây để tránh ghi đĩa liên tục trên mỗi BufEnter gây lag.
 
         local ft = vim.bo.filetype
         local bt = vim.bo.buftype

@@ -134,3 +134,46 @@ vim.diagnostic.config({
   },
 })
 
+-- ── Native Winbar for Android (100% Instant, Zero Lag, Premium UI) ──
+if android.is_android() then
+  local devicons = nil
+  local devicons_loaded = nil
+
+  _G.get_winbar = function()
+    local buf = vim.api.nvim_get_current_buf()
+    
+    -- Không hiển thị winbar ở các buffer đặc biệt, dashboard, lazy, v.v.
+    local ft = vim.bo[buf].filetype
+    local bt = vim.bo[buf].buftype
+    if ft == "dashboard" or ft == "alpha" or ft == "snacks_dashboard" or ft:match("snacks") 
+       or ft == "lazy" or ft == "mason" or ft == "help" or bt == "terminal" or bt == "nofile" then
+      return ""
+    end
+
+    local name = vim.api.nvim_buf_get_name(buf)
+    if name == "" then
+      return ""
+    end
+
+    local filename = vim.fn.fnamemodify(name, ":t")
+    
+    -- Lazy loading & caching devicons to ensure 0ms overhead
+    if devicons_loaded == nil then
+      devicons_loaded, devicons = pcall(require, "nvim-web-devicons")
+    end
+
+    local icon = ""
+    if devicons_loaded then
+      local ft_icon = devicons.get_icon(filename, nil, { default = true })
+      if ft_icon then
+        icon = ft_icon .. " "
+      end
+    end
+
+    local modified = vim.bo[buf].modified and " ●" or ""
+    return "  " .. icon .. filename .. modified
+  end
+
+  vim.opt.winbar = "%{%v:lua.get_winbar()%}"
+end
+
