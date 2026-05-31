@@ -320,6 +320,10 @@ local function open_mobile_action_menu()
   end)
 end
 
+-- Expose globally and register user command for easy touch/dashboard access
+_G.open_mobile_action_menu = open_mobile_action_menu
+vim.api.nvim_create_user_command("MobileActionMenu", open_mobile_action_menu, {})
+
 -- Bind <leader>z as the universal touch-menu shortcut
 map("n", "<leader>z", open_mobile_action_menu, { desc = "Mobile Action Menu" })
 

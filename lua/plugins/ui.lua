@@ -48,7 +48,7 @@ return {
             "",
           }, "\n"),
           keys = {
-            { icon = "📱 ", key = "z", desc = "Quick Action Menu", action = ":normal \\z" },
+            { icon = "📱 ", key = "z", desc = "Quick Action Menu", action = ":MobileActionMenu" },
             { icon = " ", key = "f", desc = "Find File", action = ":lua Snacks.dashboard.pick('files')" },
             { icon = " ", key = "n", desc = "New File", action = ":ene | startinsert" },
             { icon = " ", key = "g", desc = "Find Text", action = ":lua Snacks.dashboard.pick('live_grep')" },
