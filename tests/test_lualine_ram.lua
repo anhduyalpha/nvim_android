@@ -1,5 +1,11 @@
 -- tests/test_lualine_ram.lua
 
+-- Mock the android helper for headless execution
+package.loaded["util.android"] = {
+  is_android = function() return true end,
+  is_termux = function() return true end,
+}
+
 local ui = dofile("lua/plugins/ui.lua")
 local found_lualine = false
 for _, spec in ipairs(ui) do
