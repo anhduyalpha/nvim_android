@@ -287,35 +287,60 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end,
 })
 
--- Touch-Friendly C++ & Mobile Quick Action Menu
+-- Touch-Friendly C++ & Mobile Quick Action Menu (Context-Aware)
 local function open_mobile_action_menu()
+  local ft = vim.bo.filetype
+  local is_cpp = (ft == "c" or ft == "cpp")
+
+  -- Base items cho mọi filetype
   local items = {
-    "1. LSP: Goto Definition (gd)",
-    "2. LSP: References (gr)",
-    "3. LSP: Code Actions (<leader>ca)",
-    "4. LSP: Rename Symbol (<leader>cr)",
-    "5. Format Document (ClangFormat)",
-    "6. Run Diagnostic Check",
-    "7. Trigger Config Backup",
+    { label = "📝 Format Document", action = function() require("conform").format({ async = true, lsp_fallback = true }) end },
+    { label = "🔍 Find Symbol (file)", action = function() Snacks.picker.lsp_symbols() end },
+    { label = "🌐 Find Symbol (workspace)", action = function() Snacks.picker.lsp_workspace_symbols() end },
+    { label = "📋 LSP: Goto Definition", action = function() vim.lsp.buf.definition() end },
+    { label = "🔗 LSP: References", action = function() vim.lsp.buf.references() end },
+    { label = "💡 LSP: Code Actions", action = function() vim.lsp.buf.code_action() end },
+    { label = "✏️  LSP: Rename Symbol", action = function() vim.lsp.buf.rename() end },
   }
-  vim.ui.select(items, {
-    prompt = "📱 Mobile Quick Action Menu:",
-  }, function(choice)
-    if not choice then return end
-    if choice:match("1.") then
-      vim.lsp.buf.definition()
-    elseif choice:match("2.") then
-      vim.lsp.buf.references()
-    elseif choice:match("3.") then
-      vim.lsp.buf.code_action()
-    elseif choice:match("4.") then
-      vim.lsp.buf.rename()
-    elseif choice:match("5.") then
-      vim.lsp.buf.format({ async = true })
-    elseif choice:match("6.") then
-      vim.cmd("!./check_performance.sh")
-    elseif choice:match("7.") then
-      vim.cmd("NvimBackup")
+
+  -- Items riêng cho C/C++
+  if is_cpp then
+    table.insert(items, { label = "🔀 Switch Header/Source", action = function() vim.cmd("ClangdSwitchSourceHeader") end })
+    table.insert(items, { label = "👁️  Toggle Inlay Hints", action = function()
+      local enabled = vim.lsp.inlay_hint.is_enabled({ bufnr = 0 })
+      vim.lsp.inlay_hint.enable(not enabled, { bufnr = 0 })
+    end })
+  end
+
+  -- Git items (nếu có gitsigns)
+  table.insert(items, { label = "── Git ──", action = function() end })
+  table.insert(items, { label = "📊 Git: Preview Hunk", action = function() require("gitsigns").preview_hunk() end })
+  table.insert(items, { label = "✅ Git: Stage Hunk", action = function() require("gitsigns").stage_hunk() end })
+  table.insert(items, { label = "↩️  Git: Reset Hunk", action = function() require("gitsigns").reset_hunk() end })
+  table.insert(items, { label = "👤 Git: Blame Line", action = function() require("gitsigns").blame_line({ full = true }) end })
+  if vim.fn.executable("lazygit") == 1 then
+    table.insert(items, { label = "🚀 Open Lazygit", action = function() vim.cmd("lua _G.open_lazygit()") end })
+  end
+
+  -- System items
+  table.insert(items, { label = "── System ──", action = function() end })
+  table.insert(items, { label = "🛡️  Trigger Config Backup", action = function() vim.cmd("NvimBackup") end })
+  table.insert(items, { label = "📊 Run Performance Check", action = function() vim.cmd("!./check_performance.sh") end })
+  table.insert(items, { label = "📋 Show TODO Comments", action = function() vim.cmd("Trouble todo") end })
+
+  -- Build display list
+  local display = {}
+  for i, item in ipairs(items) do
+    table.insert(display, string.format("%d. %s", i, item.label))
+  end
+
+  vim.ui.select(display, {
+    prompt = "📱 Quick Action Menu (" .. (is_cpp and "C++" or ft) .. "):",
+  }, function(choice, idx)
+    if not choice or not idx then return end
+    local selected = items[idx]
+    if selected and selected.action then
+      pcall(selected.action)
     end
   end)
 end
@@ -331,47 +356,88 @@ map("n", "<leader>z", open_mobile_action_menu, { desc = "Mobile Action Menu" })
 map("n", "<M-Left>", "<cmd>bprevious<cr>", { silent = true, desc = "Previous Buffer" })
 map("n", "<M-Right>", "<cmd>bnext<cr>", { silent = true, desc = "Next Buffer" })
 
--- Auto-open diagnostic detail popup on cursor hold
-vim.api.nvim_create_autocmd("CursorHold", {
-  callback = function()
-    local opts = {
-      focusable = false,
-      close_events = { "BufLeave", "CursorMoved", "InsertEnter", "FocusLost" },
-      border = "rounded",
-      source = "always",
-      prefix = " ",
-      scope = "cursor",
-    }
-    vim.diagnostic.open_float(nil, opts)
-  end
-})
+-- ─────────────────────────────────────────────
+--  SESSION RESTORE (persistence.nvim)
+-- ─────────────────────────────────────────────
+map("n", "<leader>qs", function() require("persistence").load() end, { desc = "Restore Session (cwd)" })
+map("n", "<leader>qS", function() require("persistence").select() end, { desc = "Select Session" })
+map("n", "<leader>ql", function() require("persistence").load({ last = true }) end, { desc = "Restore Last Session" })
+map("n", "<leader>qd", function() require("persistence").stop() end, { desc = "Stop Session Recording" })
+
+-- ─────────────────────────────────────────────
+--  SYMBOL NAVIGATOR (Snacks picker tích hợp)
+-- ─────────────────────────────────────────────
+map("n", "<leader>ss", function() Snacks.picker.lsp_symbols() end, { desc = "LSP Symbols (file)" })
+map("n", "<leader>sS", function() Snacks.picker.lsp_workspace_symbols() end, { desc = "LSP Symbols (workspace)" })
+
+-- ─────────────────────────────────────────────
+--  DIAGNOSTIC NAVIGATION (thay thế CursorHold)
+--  Nhảy tới diagnostic kế tiếp/trước + tự động popup
+-- ─────────────────────────────────────────────
+map("n", "]d", function()
+  vim.diagnostic.goto_next({ float = { border = "rounded", source = "always" } })
+end, { desc = "Next Diagnostic" })
+map("n", "[d", function()
+  vim.diagnostic.goto_prev({ float = { border = "rounded", source = "always" } })
+end, { desc = "Prev Diagnostic" })
+map("n", "<leader>xd", "<cmd>Trouble diagnostics<cr>", { desc = "All Diagnostics (Trouble)" })
+map("n", "<leader>xD", "<cmd>Trouble diagnostics filter.buf=0<cr>", { desc = "Buffer Diagnostics (Trouble)" })
+map("n", "gl", function()
+  vim.diagnostic.open_float({ border = "rounded", source = "always" })
+end, { desc = "Show Diagnostic (cursor)" })
+
+-- ─────────────────────────────────────────────
+--  TODO COMMENTS NAVIGATION
+-- ─────────────────────────────────────────────
+map("n", "]t", function() require("todo-comments").jump_next() end, { desc = "Next TODO" })
+map("n", "[t", function() require("todo-comments").jump_prev() end, { desc = "Prev TODO" })
+map("n", "<leader>xt", "<cmd>Trouble todo<cr>", { desc = "All TODOs (Trouble)" })
 
 -- Floating Interactive C++ & Mobile Guide
 local function show_cpp_mobile_help()
   local buf = vim.api.nvim_create_buf(false, true)
   local border_lines = {
-    " 📘 HƯỚNG DẪN DEV C++ & PHÍM TẮT TRÊN ANDROID (TERMUX) ",
+    " 📘 HƯỚNG DẪN PHÍM TẮT TRÊN ANDROID (TERMUX) ",
     "======================================================",
-    " 1. PHÍM TẮT SOẠN THẢO DI ĐỘNG (Normal Mode):",
-    "   • <leader>z : Mở Menu hành động nhanh cảm ứng.",
-    "   • Ctrl + q  : Lưu và đóng buffer hiện tại.",
-    "   • Ctrl + x  : Đóng cửa sổ split active.",
-    "   • Tab       : Thụt dòng (Visual: giữ vùng chọn).",
-    "   • Alt + Up/Down: Di chuyển dòng code lên/xuống.",
-    "   • Alt + Trái/Phải: Chuyển nhanh giữa các buffer.",
+    " 1. SOẠN THẢO (Normal Mode):",
+    "   • <leader>z : Menu hành động nhanh (context-aware)",
+    "   • q         : Đóng buffer → explorer → thoát nvim",
+    "   • Ctrl + x  : Đóng cửa sổ split active",
+    "   • Tab       : Thụt dòng (Visual: giữ vùng chọn)",
+    "   • Alt+Up/Dn : Di chuyển dòng code lên/xuống",
+    "   • Alt+L/R   : Chuyển nhanh giữa các buffer",
+    "   • <leader>cf: Format document (auto on save)",
     " ",
-    " 2. DEV C++ CHUYÊN NGHIỆP (Nhấn 'c' trong file .cpp):",
-    "   • ct : Biên dịch & Chạy mã nguồn trong Terminal.",
-    "   • cs : Biên dịch & Chạy mã nguồn + Đo thời gian.",
-    "   • cv : Biên dịch với UBSan phát hiện lỗi bộ nhớ.",
-    "   • cm : Chuyển đổi giữa chế độ Debug và Release.",
-    "   • cx : Chạy lại binary đã biên dịch gần nhất.",
-    "   • ce : Hiển thị bảng lỗi biên dịch (Quickfix).",
-    "   • cR : Khởi động lại máy chủ gợi ý clangd Stuck.",
+    " 2. NAVIGATION & DIAGNOSTICS:",
+    "   • <leader>ss: Tìm symbol trong file (outline)",
+    "   • <leader>sS: Tìm symbol workspace",
+    "   • ]d / [d   : Nhảy diagnostic tiếp/trước",
+    "   • gl        : Xem diagnostic tại cursor",
+    "   • ]t / [t   : Nhảy TODO tiếp/trước",
+    "   • s / S     : Flash jump / treesitter select",
     " ",
-    " 3. SAO LƯU HỆ THỐNG AN TOÀN:",
-    "   • :NvimBackup : Tạo tệp sao lưu .zip cực nhanh.",
-    "   • Chạy ./backup_recovery.sh để khôi phục cấu hình.",
+    " 3. TREESITTER TEXT OBJECTS:",
+    "   • af/if     : Chọn around/inside function",
+    "   • ac/ic     : Chọn around/inside class",
+    "   • aa/ia     : Chọn around/inside parameter",
+    "   • ]f / [f   : Nhảy tới function tiếp/trước",
+    " ",
+    " 4. GIT WORKFLOW:",
+    "   • <leader>gg: Mở Lazygit (floating)",
+    "   • ]h / [h   : Nhảy giữa các git hunk",
+    "   • <leader>gs: Stage hunk  / gS: Stage buffer",
+    "   • <leader>gr: Reset hunk  / gR: Reset buffer",
+    "   • <leader>gb: Blame line  / gd: Diff file",
+    " ",
+    " 5. SESSION & SYSTEM:",
+    "   • <leader>qs: Restore session (cwd)",
+    "   • <leader>ql: Restore last session",
+    "   • :NvimBackup: Tạo backup .zip cực nhanh",
+    " ",
+    " 6. C++ DEV (Nhấn 'c' trong file .cpp):",
+    "   • ct: Compile & Run  / cs: + Đo thời gian",
+    "   • cv: UBSan  / cm: Toggle Debug/Release",
+    "   • cx: Re-run / ce: Quickfix / cR: Restart clangd",
     "======================================================",
     "                 [ Nhấn q để đóng ]",
   }
@@ -379,7 +445,7 @@ local function show_cpp_mobile_help()
   vim.bo[buf].modifiable = false
   vim.bo[buf].filetype = "help"
 
-  local width = 56
+  local width = 58
   local height = #border_lines
   local row = math.floor((vim.o.lines - height) / 2)
   local col = math.floor((vim.o.columns - width) / 2)

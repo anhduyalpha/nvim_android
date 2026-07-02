@@ -189,13 +189,4 @@ return {
     "folke/tokyonight.nvim",
     lazy = true,
   },
-
-  -- ═══════════════════════════════════════════════
-  --  7. CATPPUCCIN — đã cài, giữ lại
-  -- ═══════════════════════════════════════════════
-  {
-    "catppuccin/nvim",
-    name = "catppuccin",
-    lazy = true,
-  },
 }

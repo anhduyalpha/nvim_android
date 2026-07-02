@@ -147,5 +147,113 @@
       "}"
     ],
     "description": "Tìm số nguyên tố nhanh"
+  },
+  "Khai báo lớp đầy đủ": {
+    "prefix": "class",
+    "body": [
+      "class ${1:ClassName} {",
+      "private:",
+      "\t${2:// Thuộc tính}",
+      "public:",
+      "\t${1:ClassName}();",
+      "\t~${1:ClassName}();",
+      "};$0"
+    ],
+    "description": "Khung lớp đầy đủ với public/private, constructor và destructor"
+  },
+  "Constructor với danh sách khởi tạo": {
+    "prefix": "ctor",
+    "body": [
+      "${1:ClassName}::${1:ClassName}(${2:type} ${3:param}) : ${4:member}(${3:param}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Hàm tạo với danh sách khởi tạo thành viên"
+  },
+  "Destructor ảo": {
+    "prefix": "dtor",
+    "body": [
+      "virtual ~${1:ClassName}() = default;"
+    ],
+    "description": "Hàm huỷ ảo mặc định"
+  },
+  "Getter và Setter": {
+    "prefix": "getset",
+    "body": [
+      "${1:type} get${2:Name}() const { return ${3:name}; }",
+      "void set${2:Name}(${1:type} ${3:name}) { this->${3:name} = ${3:name}; }"
+    ],
+    "description": "Cặp hàm getter và setter cho thuộc tính"
+  },
+  "Kế thừa lớp": {
+    "prefix": "inh",
+    "body": [
+      "class ${1:Derived} : public ${2:Base} {",
+      "public:",
+      "\t${1:Derived}();",
+      "\t~${1:Derived}() override;",
+      "};$0"
+    ],
+    "description": "Lớp kế thừa từ lớp cha"
+  },
+  "Toán tử xuất <<": {
+    "prefix": "op<<",
+    "body": [
+      "friend ostream& operator<<(ostream& os, const ${1:ClassName}& ${2:obj}) {",
+      "\tos << ${2:obj}.${3:member};",
+      "\treturn os;",
+      "}"
+    ],
+    "description": "Nạp chồng toán tử xuất ostream"
+  },
+  "Khối try-catch": {
+    "prefix": "try",
+    "body": [
+      "try {",
+      "\t${1:// Mã lệnh}",
+      "} catch (const ${2:exception}& ${3:e}) {",
+      "\tcerr << ${3:e}.what() << endl;",
+      "}"
+    ],
+    "description": "Khối bắt ngoại lệ try-catch"
+  },
+  "Vòng lặp for theo phạm vi": {
+    "prefix": "foreach",
+    "body": [
+      "for (const auto& ${1:item} : ${2:container}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Vòng lặp range-based for duyệt phần tử"
+  },
+  "Biểu thức Lambda": {
+    "prefix": "lambda",
+    "body": [
+      "auto ${1:func} = [](${2:type} ${3:param}) -> ${4:returnType} {",
+      "\treturn ${5:result};",
+      "};"
+    ],
+    "description": "Biểu thức lambda với tham số và kiểu trả về"
+  },
+  "Khai báo Vector": {
+    "prefix": "vec",
+    "body": [
+      "vector<${1:type}> ${2:name}(${3:n});"
+    ],
+    "description": "Khai báo vector với kích thước cho trước"
+  },
+  "Xuất nhanh cout": {
+    "prefix": "cout",
+    "body": [
+      "cout << ${1:value} << endl;"
+    ],
+    "description": "In giá trị ra màn hình với xuống dòng"
+  },
+  "Nhập nhanh cin": {
+    "prefix": "cin",
+    "body": [
+      "cin >> ${1:variable};"
+    ],
+    "description": "Nhập giá trị từ bàn phím"
   }
 }

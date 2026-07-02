@@ -51,6 +51,7 @@ vim.opt.timeoutlen = 100 -- Instant leader key response
 vim.opt.ttimeoutlen = 10 -- Key code timeout
 vim.opt.synmaxcol = 200 -- Limit syntax highlight columns
 vim.opt.regexpengine = 0 -- Auto-select regexp engine
+vim.opt.redrawtime = 500 -- Prevent freeze on complex syntax (default 2000, giảm cho Android)
 
 -- ── Files & Undo ─────────────────────────────────────────
 vim.opt.swapfile = false -- Disable swapfile (save I/O)
@@ -69,7 +70,7 @@ vim.opt.foldenable = false -- Disable folding on open
 
 -- ── Session & Shada ──────────────────────────────────────
 vim.opt.sessionoptions = { "buffers", "curdir", "tabpages", "winsize" }
-vim.opt.shada = "!,'100,<50,s10,h" -- Limited shada for faster I/O
+vim.opt.shada = "!,'50,<30,s5,h" -- Reduced shada for faster I/O on Android
 
 -- ── Format Options ───────────────────────────────────────
 vim.opt.formatoptions:remove({ "c", "r", "o" }) -- Don't auto-comment on newline

@@ -151,53 +151,11 @@ return {
     },
   },
 
+
   -- ═══════════════════════════════════════════════
-  --  4. NOICE - UI popups đẹp hơn
+  --  4. NOICE — Cấu hình nằm trong noice.lua
   -- ═══════════════════════════════════════════════
-  {
-    "folke/noice.nvim",
-    opts = {
-      presets = {
-        bottom_search = true,
-        command_palette = true,
-        long_message_to_split = true,
-        lsp_doc_border = true,
-      },
-      views = {
-        cmdline_popup = {
-          position = {
-            row = "40%",
-            col = "50%",
-          },
-          size = {
-            width = math.max(40, math.floor(vim.o.columns * 0.6)),
-            height = "auto",
-          },
-        },
-        popupmenu = {
-          relative = "editor",
-          position = {
-            row = "45%",
-            col = "50%",
-          },
-          size = {
-            width = math.max(40, math.floor(vim.o.columns * 0.6)),
-            height = 10,
-          },
-          border = {
-            style = "rounded",
-            padding = { 0, 1 },
-          },
-        },
-        mini = {
-          position = {
-            row = -2,
-            col = "100%",
-          },
-        },
-      },
-    },
-  },
+
 
   -- ═══════════════════════════════════════════════
   --  6. COLORSCHEME — load từ colorscheme.lua
