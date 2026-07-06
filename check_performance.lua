@@ -29,6 +29,7 @@ end
 
 -- Kiểm tra xem có đang thực sự chạy trên Android/Termux hay không
 local is_real_android = vim.fn.has("android") == 1 or vim.fn.executable("termux-setup-storage") == 1 or vim.fn.getenv("TERMUX_VERSION") ~= vim.NIL
+local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
 
 -- Tự động nạp các tệp cấu hình cục bộ để phân tích chính xác trong môi trường headless
 pcall(function()
@@ -96,9 +97,9 @@ local config_path = vim.fn.stdpath("config"):gsub("\\", "/"):lower()
 local cwd_path = vim.fn.getcwd():gsub("\\", "/"):lower()
 local is_path_mismatch = false
 
-if is_android and config_path ~= cwd_path then
+if is_real_android and not is_windows and is_android and config_path ~= cwd_path then
   is_path_mismatch = true
-  table.insert(warnings, string.format("Bạn đang chạy chẩn đoán từ thư mục '%s',\n     nhưng Neovim thực tế đang sử dụng cấu hình tại '%s'.\n     👉 Khuyên dùng: Liên kết thư mục dự án này tới ~/.config/nvim bằng lệnh:\n     rm -rf ~/.config/nvim && ln -s %s ~/.config/nvim", cwd_path, config_path, cwd_path))
+  table.insert(warnings, string.format("Bạn đang chạy chẩn đoán từ thư mục '%s',\n     nhưng Neovim thực tế đang sử dụng cấu hình tại '%s'.\n     👉 Khuyên dùng: chạy scripts/termux-setup.sh từ thư mục dự án để liên kết cấu hình an toàn.", cwd_path, config_path))
 end
 
 print(string.format("  • Hệ điều hành: %s%s%s", 
