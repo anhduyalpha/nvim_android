@@ -10,7 +10,7 @@ if ! command -v pkg >/dev/null 2>&1; then
   exit 1
 fi
 
-pkg install -y git neovim clang lld ripgrep fd python nodejs unzip zip lazygit
+pkg install -y git neovim clang lld ripgrep fd python nodejs unzip zip lazygit tmux
 for pkg_name in lua-language-server stylua shfmt; do
   pkg install -y "$pkg_name" || echo "Optional package unavailable: $pkg_name"
 done
@@ -62,7 +62,7 @@ cat >> "$tmp_config" <<EOF
 $begin_marker
 ---
 If:
-  PathMatch: .*\\.(cc|cpp|cxx|h|hh|hpp)$
+  PathMatch: .*\.(cc|cpp|cxx|h|hh|hpp)$
 CompileFlags:
   Add: ["-I$repo_root/include"]
 $end_marker
@@ -74,7 +74,11 @@ chmod +x \
   "$repo_root/check_performance.sh" \
   "$repo_root/backup_recovery.sh" \
   "$repo_root/clean.sh" \
+  "$repo_root/scripts/disable-esc.sh" \
   "$repo_root/scripts/termux-setup.sh"
+
+# Remove ESC from the managed Termux extra-key row and tune tmux input latency.
+"$repo_root/scripts/disable-esc.sh" --apply
 
 # Verify that Termux clang++ and the compatibility header work together.
 probe="${TMPDIR:-$PREFIX/tmp}/nvim_android_bits_$$.cpp"
