@@ -140,3 +140,6 @@ map("n", "[t", function()
     todo.jump_prev()
   end
 end, { desc = "Previous TODO" })
+
+-- :vscode toggles a reversible VSCode-style keyboard overlay.
+require("util.vscode_mode").setup()
