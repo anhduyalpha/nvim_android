@@ -50,9 +50,15 @@ local function focus_explorer()
   end)
 end
 
--- Fast Insert-mode escape.
-map("i", "jk", "<Esc>", { desc = "Exit Insert mode" })
-map("i", "jj", "<Esc>", { desc = "Exit Insert mode" })
+-- Android/Termux input policy: never rely on the physical ESC key.
+-- vim.keymap.set is non-recursive, so jk/jj below still execute the real Escape action.
+for _, mode in ipairs({ "n", "i", "x", "s", "o", "c", "t" }) do
+  map(mode, "<Esc>", "<Nop>", { silent = true, nowait = true, desc = "Escape Disabled" })
+end
+
+-- Fast Insert-mode exit without touching the Termux ESC key.
+map("i", "jk", "<Esc>", { desc = "Exit Insert Mode" })
+map("i", "jj", "<Esc>", { desc = "Exit Insert Mode" })
 
 -- Optimized touch-first key workflow.
 map("n", "q", mobile.smart_close, { silent = true, nowait = true, desc = "Smart Quit" })
