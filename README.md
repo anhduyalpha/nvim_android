@@ -1,6 +1,6 @@
 # Neovim Android / Termux
 
-A LazyVim configuration tuned for coding on Android with limited RAM, a small screen, and touch-oriented terminal input. It includes C/C++ compile/run workflows, LSP, formatting, Git tools, backups, diagnostics, performance checks, and a native mobile action menu.
+A LazyVim configuration tuned for coding on Android with limited RAM, a small screen, Termux, and tmux. It includes C/C++ compile/run workflows, LSP, formatting, Git tools, backups, diagnostics, performance checks, debounced auto save, a no-ESC input workflow, and a native mobile action menu.
 
 ## Install
 
@@ -15,7 +15,7 @@ cd nvim_android
 bash scripts/termux-setup.sh
 ```
 
-The setup script installs the required packages, moves an existing Neovim config to a timestamped backup, links this repository to `~/.config/nvim`, syncs plugins, configures clangd, verifies `bits/stdc++.h`, and runs the health check.
+The setup script installs the required packages, safely links this repository to `~/.config/nvim`, configures clangd compatibility, removes `ESC` from the managed Termux extra-key row, tunes tmux input latency, syncs plugins, and runs the health check.
 
 ## Smooth-mobile defaults
 
@@ -25,36 +25,81 @@ The setup script installs the required packages, moves an existing Neovim config
 - Large files automatically disable expensive syntax, Treesitter, diagnostics, and persistent undo.
 - Cursorline rendering pauses in Insert mode.
 - Plugin installation concurrency is limited on Android.
-- C/C++ files are no longer written every time Insert mode closes. Smart save runs when leaving the buffer or switching away from Termux.
-- Automatic completion documentation and signature popups are disabled on Android to reduce UI redraw and LSP work.
+- clangd and completion redraw work are reduced on Android.
+- Modified files are saved 1.8 seconds after the last edit.
+- Auto save temporarily skips format-on-save to prevent cursor jumps and typing stalls.
+- The physical `ESC` key is disabled inside Neovim; use `jk` or `jj` instead.
 
-## Optimized custom keys
-
-This configuration intentionally uses a touch-first editing model instead of native Vim behavior for several single-key commands.
+## Touch-first keys
 
 | Key | Action |
 |---|---|
-| `q` | Smart-close a float, special window, current buffer, or Neovim |
+| `q` | Smart close: popup → special window → code buffer → Explorer → Neovim |
 | `d` | Delete the current line |
-| `D` | Delete from the cursor to the end of the line |
+| `D` | Delete to the end of the line |
 | `t` | Toggle Snacks Explorer |
-| `U` | Open or focus Snacks Explorer |
-| `Ctrl-a` | Select the entire file |
-| `Tab` / `Shift-Tab` | Indent / outdent the line or selected block |
-| `Ctrl-g` | Start native macro recording, replacing the original `q` entry point |
+| `U` | Focus Explorer, or open it when closed |
+| `Ctrl+A` | Select all |
+| `Tab` / `Shift+Tab` | Indent / outdent line or selection |
+| `Ctrl+G` | Start native Vim macro recording |
+| `jk` or `jj` | Leave Insert mode without pressing `ESC` |
 | `<leader>z` | Open the mobile action menu |
 | `<leader>h` | Open the mobile quick guide |
 | `<leader>Q` | Smart-close alias |
-| `<leader>e` | Toggle Snacks Explorer alias |
 | `<M-Left>` / `<M-Right>` | Previous / next buffer |
 | `<M-Up>` / `<M-Down>` | Move the current line or selection |
-| `<leader>cf` | Format the current file |
+| `<leader>cf` | Format the current file manually |
 | `gl` | Show diagnostics at the cursor |
 | `]d` / `[d` | Next / previous diagnostic |
 | `]t` / `[t` | Next / previous TODO comment |
-| `jk` or `jj` | Leave Insert mode |
 
 LazyVim's standard LSP keys such as `gd`, `gr`, `K`, code actions, rename, and picker shortcuts remain available.
+
+## Auto save
+
+Auto save is enabled by default.
+
+- Text changes are debounced for 1.8 seconds, so the editor does not write on every keystroke.
+- Leaving a buffer or switching away from Termux saves immediately.
+- Large files, unnamed buffers, readonly buffers, and special plugin windows are skipped.
+- Manual `:w` and `<leader>cf` still run your normal formatting workflow.
+
+Commands:
+
+```vim
+:AutoSaveNow
+:AutoSaveToggle
+```
+
+Change the delay in Lua before `autocmds.lua` loads:
+
+```lua
+vim.g.android_autosave_delay = 2500
+```
+
+## Disable the ESC key in Termux and tmux
+
+The setup script applies this automatically. Run it again manually with:
+
+```sh
+bash scripts/disable-esc.sh --apply
+```
+
+This script:
+
+- creates timestamped backups of existing Termux and tmux configuration files;
+- adds a Termux extra-key layout without `ESC`;
+- keeps useful mobile keys such as `CTRL`, `ALT`, arrows, `TAB`, page navigation, and keyboard toggle;
+- sets tmux `escape-time` to zero so Alt/Meta key combinations remain responsive;
+- reloads Termux settings and the current tmux server when available.
+
+Remove only the managed configuration blocks with:
+
+```sh
+bash scripts/disable-esc.sh --restore
+```
+
+Inside Neovim, raw `ESC` is mapped to no operation in Normal, Insert, Visual, Select, Operator-pending, Command-line, and Terminal mode. The non-recursive `jk` and `jj` mappings still execute the real Insert-mode exit action.
 
 ## C and C++ workflow
 
@@ -71,34 +116,18 @@ LazyVim's standard LSP keys such as `gd`, `gr`, `K`, code actions, rename, and p
 Recommended Termux packages:
 
 ```sh
-pkg install clang lld
+pkg install clang lld clangd
 ```
 
 ### `bits/stdc++.h` on Termux
 
-Termux uses Clang with libc++, so GNU's non-standard `bits/stdc++.h` header is not normally installed. This repository provides a compatibility header at:
+Termux uses Clang with libc++, which does not provide GNU's non-standard `bits/stdc++.h`. This repository includes a compatibility header at:
 
 ```text
-~/.config/nvim/include/bits/stdc++.h
+include/bits/stdc++.h
 ```
 
-The setup and Neovim configuration expose that directory to both `clang++` and clangd. After updating the repository, run:
-
-```sh
-bash scripts/termux-setup.sh
-```
-
-Then this works with the built-in compile commands:
-
-```cpp
-#include <bits/stdc++.h>
-using namespace std;
-
-int main() {
-    vector<int> values{3, 1, 2};
-    sort(values.begin(), values.end());
-}
-```
+The setup connects that header to both compiler jobs and clangd. It also compiles a real probe during installation, so a broken include configuration fails immediately.
 
 ## Verify the configuration
 
@@ -121,6 +150,8 @@ Inside Neovim, force a safe Lua memory cleanup with:
 ```vim
 :NvimOptimize
 ```
+
+Use `:Lazy profile` to inspect plugin startup cost and `:checkhealth` when a language server, formatter, clipboard provider, or terminal integration is not working.
 
 ## Safe repository cleanup
 
@@ -167,5 +198,3 @@ cd /path/to/nvim_android
 git pull
 bash scripts/termux-setup.sh
 ```
-
-Use `:Lazy profile` to inspect plugin startup cost and `:checkhealth` when a language server, formatter, clipboard provider, or terminal integration is not working.
