@@ -1,9 +1,39 @@
-tt.*
-.tests
-doc/tags
-debug
-.repro
-foo.*
+# Neovim and editor state
+*.swp
+*.swo
+*~
+*.tmp
 *.log
-data
+doc/tags
+.DS_Store
+
+# Test and reproduction scratch space
+.tests/
+.repro/
+tt.*
+foo.*
+
+# Generated reports
 performance_report.txt
+performance_report*.txt
+
+# Local build/debug output
+build/
+**/build/
+debug/
+data/
+*.o
+*.obj
+*.out
+*.exe
+compile_commands.json
+
+# Local backups and archives
+nvim_backup_*.zip
+NvimBackup*.zip
+*.old
+
+# Local environment files
+.env
+.env.*
+!.env.example

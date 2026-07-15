@@ -1,78 +1,74 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-# ============================================================================
-# clean.sh — Script dọn dẹp các tệp .lua cũ, tệp nháp và tệp tạm trên Android
-# ============================================================================
-# Cách chạy trên Termux:
-#   1. Cấp quyền thực thi:  chmod +x clean.sh
-#   2. Chạy script:         ./clean.sh
-# ============================================================================
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+dry_run=false
+clean_cache=false
 
-# Định nghĩa màu sắc
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+usage() {
+  cat <<'EOF'
+Usage: ./clean.sh [--dry-run] [--cache]
 
-echo -e "${CYAN}======================================================================${NC}"
-echo -e "${CYAN}      🧹 TIẾN TRÌNH DỌN DẸP TỆP TIN TẠM & .LUA CŨ TRÊN TERMUX        ${NC}"
-echo -e "${CYAN}======================================================================${NC}"
+Safely removes generated files from this repository.
+  --dry-run  Print what would be removed.
+  --cache    Also clear Neovim's cache directory (plugins are kept).
 
-# Danh sách các tệp tin kiểm thử/nháp cần quét và dọn dẹp
-temp_files=(
-  "test_performance.lua"
-  "test_ctrl_q.lua"
-  "test_tab.lua"
-  "test_lsp_gd.lua"
-  "test_silent_move.lua"
-  "test_alt_keymaps.lua"
-  "test_buffers.lua"
-  "test_c.lua"
-  "test_cpp.lua"
-  "test_oop_refinements.lua"
-  "test_ui.lua"
-)
+Tracked source files and tests/ are never deleted.
+EOF
+}
 
-deleted_count=0
-
-echo -e "\n${BLUE}1. Quét và dọn dẹp các tệp thử nghiệm test_*.lua cục bộ:${NC}"
-for file in "${temp_files[@]}"; do
-  if [ -f "$file" ]; then
-    echo -e "  ${YELLOW}• Đang xóa tệp tạm:${NC} $file"
-    rm -f "$file"
-    deleted_count=$((deleted_count + 1))
-  fi
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) dry_run=true ;;
+    --cache) clean_cache=true ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $arg" >&2; usage >&2; exit 2 ;;
+  esac
 done
 
-# Tìm và xóa thêm các tệp test_*.lua khác trong các thư mục con nếu có (loại trừ các thư mục hệ thống như .git)
-other_tests=$(find . -maxdepth 3 -name "test_*.lua" -not -path '*/.*' 2>/dev/null)
-if [ -n "$other_tests" ]; then
-  for file in $other_tests; do
-    echo -e "  ${YELLOW}• Phát hiện tệp test phụ:${NC} $file"
-    rm -f "$file"
-    deleted_count=$((deleted_count + 1))
-  done
+remove_path() {
+  local path="$1"
+  [ -e "$path" ] || [ -L "$path" ] || return 0
+  if $dry_run; then
+    printf 'would remove: %s\n' "$path"
+  else
+    rm -rf -- "$path"
+    printf 'removed: %s\n' "$path"
+  fi
+}
+
+cd "$repo_root"
+
+# Root-level generated directories already ignored by the repository.
+for path in .tests .repro data debug build performance_report.txt; do
+  remove_path "$repo_root/$path"
+done
+
+# Editor leftovers and generated reports. Exclude .git and all tracked test sources.
+while IFS= read -r -d '' path; do
+  remove_path "$path"
+done < <(
+  find "$repo_root" \
+    -path "$repo_root/.git" -prune -o \
+    -path "$repo_root/tests" -prune -o \
+    -type f \( \
+      -name '*.log' -o \
+      -name '*.tmp' -o \
+      -name '*.swp' -o \
+      -name '*.swo' -o \
+      -name '*~' -o \
+      -name '.DS_Store' -o \
+      -name 'performance_report*.txt' \
+    \) -print0
+)
+
+if $clean_cache; then
+  cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/nvim"
+  remove_path "$cache_root"
 fi
 
-# Dọn dẹp tệp tin swap của Vim/Neovim (*.swp, *.swo) nếu có
-echo -e "\n${BLUE}2. Quét dọn dẹp tệp tin đệm swap/backup (*.swp, *.swo):${NC}"
-swap_files=$(find . -name "*.swp" -o -name "*.swo" -not -path '*/.*' 2>/dev/null)
-if [ -n "$swap_files" ]; then
-  for file in $swap_files; do
-    echo -e "  ${YELLOW}• Đang xóa tệp swap/tạm:${NC} $file"
-    rm -f "$file"
-    deleted_count=$((deleted_count + 1))
-  done
+if $dry_run; then
+  echo "Dry run complete. No files were deleted."
 else
-  echo -e "  ${GREEN}[✓] Không phát hiện tệp swap hoặc tệp tạm nào dư thừa.${NC}"
+  echo "Repository cleanup complete."
 fi
-
-echo -e "\n${CYAN}======================================================================${NC}"
-if [ $deleted_count -gt 0 ]; then
-  echo -e "${GREEN}🎉 HOÀN TẤT! Đã giải phóng thành công $deleted_count tệp tin rác/cũ khỏi thư mục.${NC}"
-else
-  echo -e "${GREEN}🎉 HOÀN TẤT! Thư mục làm việc của bạn đã sạch sẽ hoàn toàn, không có tệp dư thừa.${NC}"
-fi
-echo -e "${CYAN}======================================================================${NC}\n"
