@@ -1,6 +1,6 @@
 # Neovim Android / Termux
 
-A LazyVim configuration tuned for coding on Android with limited RAM, a small screen, Termux, and tmux. It includes C/C++ compile/run workflows, LSP, formatting, Git tools, backups, diagnostics, performance checks, debounced auto save, a no-ESC input workflow, and a native mobile action menu.
+A LazyVim configuration tuned for coding on Android with limited RAM, a small screen, Termux, and tmux. It includes C/C++ compile/run workflows, LSP, formatting, Git tools, backups, diagnostics, performance checks, debounced auto save, a no-ESC input workflow, a native mobile action menu, and an optional VSCode-style keyboard mode.
 
 ## Install
 
@@ -29,6 +29,7 @@ The setup script installs the required packages, safely links this repository to
 - Modified files are saved 1.8 seconds after the last edit.
 - Auto save temporarily skips format-on-save to prevent cursor jumps and typing stalls.
 - The physical `ESC` key is disabled inside Neovim; use `jk` or `jj` instead.
+- VSCode mode is lazy and does not add startup work until explicitly enabled.
 
 ## Touch-first keys
 
@@ -54,6 +55,68 @@ The setup script installs the required packages, safely links this repository to
 | `]t` / `[t` | Next / previous TODO comment |
 
 LazyVim's standard LSP keys such as `gd`, `gr`, `K`, code actions, rename, and picker shortcuts remain available.
+
+## VSCode mode
+
+Type the following in Neovim command mode:
+
+```vim
+:vscode
+```
+
+The command is intentionally lowercase. It toggles a reversible VSCode-style keyboard overlay. Type `:vscode` again to return to the touch-first mobile mappings.
+
+Additional commands:
+
+```vim
+:vscode on
+:vscode off
+:vscode status
+```
+
+Set this before `keymaps.lua` loads to start in VSCode mode automatically:
+
+```lua
+vim.g.vscode_mode_default = true
+```
+
+### Main VSCode shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+A` | Select all |
+| `Ctrl+C` | Copy selection, or copy the current line when no selection exists |
+| `Ctrl+V` | Paste, including inside Insert and command-line mode |
+| `Ctrl+X` | Cut selection, or cut the current line |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
+| `Ctrl+S` | Save current file |
+| `Ctrl+D` | Add/select the next occurrence using lazy-loaded multicursor support |
+| `Ctrl+L` | Select current line |
+| `Ctrl+/` | Toggle comment; Termux normally sends this as `Ctrl+_` |
+| `Ctrl+F` / `Ctrl+H` | Find / replace in current file |
+| `Ctrl+P` | Quick-open a file |
+| `Alt+P` | Open command palette |
+| `Ctrl+N` / `Ctrl+W` | New file / close current editor |
+| `Ctrl+B` | Toggle Explorer |
+| `Ctrl+J` | Toggle terminal |
+| `Ctrl+G` | Go to line |
+| `Alt+Left` / `Alt+Right` | Navigate backward / forward through jump history |
+| `Alt+Up` / `Alt+Down` | Move line or selected block |
+| `Alt+Shift+Up` / `Alt+Shift+Down` | Duplicate line or selected block |
+| `Ctrl+Left` / `Ctrl+Right` | Move by word |
+| `Ctrl+Home` / `Ctrl+End` | Start / end of file |
+| `Shift+Arrow` | Extend selection |
+| `Ctrl+Enter` / `Ctrl+Shift+Enter` | Insert line below / above |
+| `Alt+Z` | Toggle word wrap |
+| `F2` | Rename symbol |
+| `F12` / `Shift+F12` | Definition / references |
+| `Ctrl+.` | Code action |
+
+`Ctrl+D` loads `vim-visual-multi` only when first used. The plugin remains unloaded in normal mobile mode and therefore adds no normal startup cost.
+
+Terminal applications do not always distinguish every `Ctrl+Shift` combination. Reliable Android alternatives such as `Alt+P`, `Alt+Shift+Arrow`, `jk`, and `jj` are included for those cases. Clipboard shortcuts use Neovim's system clipboard provider or the existing OSC52 integration.
+
+When VSCode mode is disabled, the mappings that existed before activation are restored instead of being replaced with hard-coded defaults.
 
 ## Auto save
 
