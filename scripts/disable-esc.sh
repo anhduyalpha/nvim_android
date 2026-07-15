@@ -26,7 +26,15 @@ strip_block() {
   awk -v begin="$begin" -v end="$end" '
     $0 == begin { skip = 1; next }
     $0 == end { skip = 0; next }
-    !skip { print }
+    !skip { lines[++count] = $0 }
+    END {
+      while (count > 0 && lines[count] ~ /^[[:space:]]*$/) {
+        count--
+      }
+      for (i = 1; i <= count; i++) {
+        print lines[i]
+      }
+    }
   ' "$file" > "$output"
 }
 
