@@ -31,7 +31,7 @@ end
 
 local function assert_mapping(lhs, mode, description)
   local mapping = vim.fn.maparg(lhs, mode, false, true)
-  assert_true(type(mapping) == "table" and next(mapping) ~= nil, lhs .. " mapping is missing")
+  assert_true(type(mapping) == "table" and next(mapping) ~= nil, lhs .. " mapping is missing in mode " .. mode)
   assert_true(mapping.desc == description, lhs .. " has unexpected description: " .. tostring(mapping.desc))
 end
 
@@ -50,5 +50,11 @@ assert_mapping("<Tab>", "n", "Indent Line")
 assert_mapping("<S-Tab>", "n", "Outdent Line")
 assert_mapping("<Tab>", "x", "Indent Selection")
 assert_mapping("<S-Tab>", "x", "Outdent Selection")
+assert_mapping("jk", "i", "Exit Insert Mode")
+assert_mapping("jj", "i", "Exit Insert Mode")
 
-print("PASS: optimized custom mobile key workflow is registered")
+for _, mode in ipairs({ "n", "i", "x", "s", "o", "c", "t" }) do
+  assert_mapping("<Esc>", mode, "Escape Disabled")
+end
+
+print("PASS: optimized custom keys and no-ESC workflow are registered")
