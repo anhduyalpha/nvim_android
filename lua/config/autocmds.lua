@@ -1,6 +1,6 @@
 local group = vim.api.nvim_create_augroup("AndroidSmoothUX", { clear = true })
 
--- Preserve q for macro recording in normal files, but keep it convenient in temporary windows.
+-- Temporary windows keep a buffer-local q so the global Smart Quit remains predictable.
 vim.api.nvim_create_autocmd("FileType", {
   group = group,
   pattern = {
@@ -89,3 +89,54 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     vim.highlight.on_yank({ timeout = 120 })
   end,
 })
+
+local function save_buffer(buf)
+  if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+    return
+  end
+  if vim.bo[buf].buftype ~= "" or not vim.bo[buf].modifiable or not vim.bo[buf].modified then
+    return
+  end
+  local ft = vim.bo[buf].filetype
+  if ft ~= "c" and ft ~= "cpp" then
+    return
+  end
+  vim.api.nvim_buf_call(buf, function()
+    vim.cmd("silent! update")
+  end)
+end
+
+local function setup_cpp_smart_save()
+  -- cpp.lua previously wrote on every InsertLeave, causing repeated clangd reparses and storage I/O.
+  pcall(vim.api.nvim_del_augroup_by_name, "InsertLeaveAutoSave")
+  local save_group = vim.api.nvim_create_augroup("CppSmartSave", { clear = true })
+
+  vim.api.nvim_create_autocmd("BufLeave", {
+    group = save_group,
+    pattern = { "*.c", "*.cpp", "*.h", "*.hpp" },
+    callback = function(args)
+      save_buffer(args.buf)
+    end,
+  })
+
+  vim.api.nvim_create_autocmd("FocusLost", {
+    group = save_group,
+    callback = function()
+      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        save_buffer(buf)
+      end
+    end,
+  })
+end
+
+vim.api.nvim_create_autocmd("User", {
+  group = group,
+  pattern = "VeryLazy",
+  once = true,
+  callback = function()
+    vim.defer_fn(setup_cpp_smart_save, 200)
+  end,
+})
+
+-- Fallback for minimal/headless starts where VeryLazy is not emitted.
+vim.defer_fn(setup_cpp_smart_save, 1500)
