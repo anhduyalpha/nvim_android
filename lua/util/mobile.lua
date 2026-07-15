@@ -7,40 +7,99 @@ local function safe_call(fn)
   end
 end
 
+local function is_explorer_buffer(buf)
+  if not vim.api.nvim_buf_is_valid(buf) then
+    return false
+  end
+  local ft = vim.bo[buf].filetype
+  return ft == "snacks_picker_list" or ft:match("^snacks_explorer") ~= nil or ft:match("^snacks_layout") ~= nil
+end
+
+local function explorer_window()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_is_valid(win) and is_explorer_buffer(vim.api.nvim_win_get_buf(win)) then
+      local config = vim.api.nvim_win_get_config(win)
+      if config.relative == "" then
+        return win
+      end
+    end
+  end
+end
+
+local function close_explorer(win)
+  local ok = pcall(function()
+    Snacks.explorer.close()
+  end)
+  if not ok and win and vim.api.nvim_win_is_valid(win) then
+    pcall(vim.api.nvim_win_close, win, true)
+  end
+end
+
 local function listed_normal_buffers()
   local buffers = {}
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].buflisted and vim.bo[bufnr].buftype == "" then
-      table.insert(buffers, bufnr)
+      local name = vim.api.nvim_buf_get_name(bufnr)
+      if name ~= "" or vim.bo[bufnr].modified then
+        table.insert(buffers, bufnr)
+      end
     end
   end
   return buffers
 end
 
+local function delete_current_buffer()
+  if _G.Snacks and Snacks.bufdelete then
+    local ok = pcall(Snacks.bufdelete)
+    if ok then
+      return
+    end
+  end
+  vim.cmd("confirm bdelete")
+end
+
 function M.smart_close()
   local win = vim.api.nvim_get_current_win()
+  local buf = vim.api.nvim_win_get_buf(win)
   local config = vim.api.nvim_win_get_config(win)
+
   if config.relative ~= "" then
     vim.api.nvim_win_close(win, true)
     return
   end
 
-  local buftype = vim.bo.buftype
-  if buftype ~= "" then
-    vim.cmd("close")
+  if is_explorer_buffer(buf) then
+    close_explorer(win)
     return
   end
 
-  if #listed_normal_buffers() <= 1 then
-    vim.cmd("confirm quit")
+  if vim.bo[buf].buftype ~= "" then
+    local ok = pcall(vim.cmd, "close")
+    if not ok then
+      vim.cmd("confirm quit")
+    end
     return
   end
 
-  if _G.Snacks and Snacks.bufdelete then
-    Snacks.bufdelete()
-  else
-    vim.cmd("confirm bdelete")
+  local normal_buffers = listed_normal_buffers()
+  local explorer = explorer_window()
+
+  if #normal_buffers > 1 then
+    delete_current_buffer()
+    return
   end
+
+  if #normal_buffers == 1 and explorer then
+    delete_current_buffer()
+    return
+  end
+
+  if #normal_buffers == 0 and explorer then
+    close_explorer(explorer)
+    return
+  end
+
+  vim.cmd("confirm quit")
 end
 
 local function has_lsp_client()
