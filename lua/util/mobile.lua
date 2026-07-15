@@ -143,6 +143,7 @@ local function run_repo_script(script, args)
 end
 
 function M.action_menu()
+  local vscode = require("util.vscode_mode")
   local items = {
     {
       label = "Format file",
@@ -161,6 +162,10 @@ function M.action_menu()
       action = function()
         vim.cmd("AutoSaveToggle")
       end,
+    },
+    {
+      label = vim.g.vscode_mode_enabled and "Disable VSCode mode" or "Enable VSCode mode",
+      action = vscode.toggle,
     },
     {
       label = "Find files",
@@ -260,6 +265,16 @@ function M.show_help()
     "  Tab / S-Tab   Indent / outdent",
     "  Ctrl-g        Start macro recording",
     "",
+    "VSCode mode",
+    "  :vscode       Toggle VSCode keyboard mode",
+    "  :vscode on    Enable explicitly",
+    "  :vscode off   Restore mobile mappings",
+    "  Ctrl-a/c/v/x  Select / copy / paste / cut",
+    "  Ctrl-z/y/s/d  Undo / redo / save / occurrence",
+    "  Alt-Arrows    Navigate or move lines",
+    "  Alt-S-Arrows  Duplicate line or selection",
+    "  F2 / F12      Rename / definition",
+    "",
     "Input without ESC",
     "  Esc           Disabled in every Neovim mode",
     "  jk or jj      Leave Insert mode",
@@ -291,7 +306,7 @@ function M.show_help()
     "  bits/stdc++.h Termux compatibility enabled",
   }
 
-  local width = math.min(62, math.max(30, vim.o.columns - 4))
+  local width = math.min(66, math.max(30, vim.o.columns - 4))
   local height = math.min(#lines, math.max(10, vim.o.lines - 4))
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
