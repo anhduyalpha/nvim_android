@@ -29,18 +29,32 @@ local function assert_true(value, message)
   end
 end
 
-local normal_maps = vim.api.nvim_get_keymap("n")
-local descriptions = {}
-for _, item in ipairs(normal_maps) do
-  descriptions[item.lhs] = item.desc
+local function assert_mapping(lhs, mode, description)
+  local mapping = vim.fn.maparg(lhs, mode, false, true)
+  assert_true(type(mapping) == "table" and next(mapping) ~= nil, lhs .. " mapping is missing in mode " .. mode)
+  assert_true(mapping.desc == description, lhs .. " has unexpected description: " .. tostring(mapping.desc))
 end
 
-assert_true(descriptions[" z"] == "Mobile Action Menu", "<leader>z mobile menu is missing")
-assert_true(descriptions[" h"] == "C++ Mobile Guide", "<leader>h mobile guide is missing")
-assert_true(descriptions[" Q"] == "Smart Close", "<leader>Q smart close is missing")
+assert_mapping("<leader>z", "n", "Mobile Action Menu")
+assert_mapping("<leader>h", "n", "C++ Mobile Guide")
+assert_mapping("<leader>Q", "n", "Smart Close")
 
-for _, lhs in ipairs({ "q", "d", "t", "U", "<C-A>", "<Tab>" }) do
-  assert_true(vim.fn.maparg(lhs, "n") == "", lhs .. " must keep its native Vim behavior")
+assert_mapping("q", "n", "Smart Quit")
+assert_mapping("<C-g>", "n", "Record Macro")
+assert_mapping("d", "n", "Delete Line")
+assert_mapping("D", "n", "Delete to Line End")
+assert_mapping("t", "n", "Toggle Explorer")
+assert_mapping("U", "n", "Focus Explorer")
+assert_mapping("<C-a>", "n", "Select All")
+assert_mapping("<Tab>", "n", "Indent Line")
+assert_mapping("<S-Tab>", "n", "Outdent Line")
+assert_mapping("<Tab>", "x", "Indent Selection")
+assert_mapping("<S-Tab>", "x", "Outdent Selection")
+assert_mapping("jk", "i", "Exit Insert Mode")
+assert_mapping("jj", "i", "Exit Insert Mode")
+
+for _, mode in ipairs({ "n", "i", "x", "s", "o", "c", "t" }) do
+  assert_mapping("<Esc>", mode, "Escape Disabled")
 end
 
-print("PASS: mobile mappings are available and native Vim commands are preserved")
+print("PASS: optimized custom keys and no-ESC workflow are registered")

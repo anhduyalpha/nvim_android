@@ -10,7 +10,7 @@ if ! command -v pkg >/dev/null 2>&1; then
   exit 1
 fi
 
-pkg install -y git neovim clang lld ripgrep fd python nodejs unzip zip lazygit
+pkg install -y git neovim clang lld ripgrep fd python nodejs unzip zip lazygit tmux
 for pkg_name in lua-language-server stylua shfmt; do
   pkg install -y "$pkg_name" || echo "Optional package unavailable: $pkg_name"
 done
@@ -39,12 +39,63 @@ else
   echo "Linked $config_dir -> $repo_root"
 fi
 
+# Keep the user's clangd settings and replace only this repository's managed fragment.
+clangd_dir="$HOME/.config/clangd"
+clangd_config="$clangd_dir/config.yaml"
+begin_marker="# BEGIN nvim_android bits compatibility"
+end_marker="# END nvim_android bits compatibility"
+mkdir -p "$clangd_dir"
+tmp_config="$(mktemp)"
+
+if [ -f "$clangd_config" ]; then
+  awk -v begin="$begin_marker" -v end="$end_marker" '
+    $0 == begin { skip = 1; next }
+    $0 == end { skip = 0; next }
+    !skip { print }
+  ' "$clangd_config" > "$tmp_config"
+fi
+
+if [ -s "$tmp_config" ]; then
+  printf '\n' >> "$tmp_config"
+fi
+cat >> "$tmp_config" <<EOF
+$begin_marker
+---
+If:
+  PathMatch: .*\.(cc|cpp|cxx|h|hh|hpp)$
+CompileFlags:
+  Add: ["-I$repo_root/include"]
+$end_marker
+EOF
+mv "$tmp_config" "$clangd_config"
+echo "Configured clangd compatibility include: $repo_root/include"
+
 chmod +x \
   "$repo_root/check_performance.sh" \
   "$repo_root/backup_recovery.sh" \
   "$repo_root/clean.sh" \
+  "$repo_root/scripts/disable-esc.sh" \
   "$repo_root/scripts/termux-setup.sh"
 
+# Remove ESC from the managed Termux extra-key row and tune tmux input latency.
+"$repo_root/scripts/disable-esc.sh" --apply
+
+# Verify that Termux clang++ and the compatibility header work together.
+probe="${TMPDIR:-$PREFIX/tmp}/nvim_android_bits_$$.cpp"
+trap 'rm -f "$probe"' EXIT
+cat > "$probe" <<'EOF'
+#include <bits/stdc++.h>
+int main() {
+  std::vector<int> values{3, 1, 2};
+  std::sort(values.begin(), values.end());
+  return values.front() == 1 ? 0 : 1;
+}
+EOF
+clang++ -std=c++20 -I"$repo_root/include" -fsyntax-only "$probe"
+rm -f "$probe"
+trap - EXIT
+
+echo "bits/stdc++.h compatibility check passed."
 nvim --headless "+Lazy! sync" +qa
 (cd "$repo_root" && ./check_performance.sh)
 
