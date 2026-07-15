@@ -5,7 +5,7 @@ mode="${1:---apply}"
 termux_dir="$HOME/.termux"
 termux_properties="$termux_dir/termux.properties"
 tmux_config="$HOME/.tmux.conf"
-timestamp="$(date +%Y%m%d%H%M%S)"
+timestamp="$(date +%Y%m%d%H%M%S).$$"
 
 termux_begin="# BEGIN nvim_android no-escape keys"
 termux_end="# END nvim_android no-escape keys"
@@ -38,6 +38,20 @@ backup_file() {
   fi
 }
 
+write_if_changed() {
+  local source="$1"
+  local target="$2"
+
+  if [ -f "$target" ] && cmp -s "$source" "$target"; then
+    rm -f "$source"
+    return 1
+  fi
+
+  backup_file "$target"
+  mv "$source" "$target"
+  return 0
+}
+
 reload_termux() {
   if command -v termux-reload-settings >/dev/null 2>&1; then
     termux-reload-settings || true
@@ -60,9 +74,6 @@ strip_block "$tmux_config" "$tmux_begin" "$tmux_end" "$tmux_tmp"
 
 case "$mode" in
   --apply)
-    backup_file "$termux_properties"
-    backup_file "$tmux_config"
-
     if [ -s "$termux_tmp" ]; then
       printf '\n' >> "$termux_tmp"
     fi
@@ -72,8 +83,6 @@ case "$mode" in
 extra-keys = [['CTRL','ALT','TAB','HOME','UP','END','PGUP'],['/','-','LEFT','DOWN','RIGHT','PGDN','KEYBOARD']]
 # END nvim_android no-escape keys
 EOF
-    mv "$termux_tmp" "$termux_properties"
-    termux_tmp="$(mktemp)"
 
     if [ -s "$tmux_tmp" ]; then
       printf '\n' >> "$tmux_tmp"
@@ -85,25 +94,47 @@ set -sg escape-time 0
 set -g focus-events on
 # END nvim_android mobile input
 EOF
-    mv "$tmux_tmp" "$tmux_config"
+
+    changed=0
+    if write_if_changed "$termux_tmp" "$termux_properties"; then
+      changed=1
+    fi
+    termux_tmp="$(mktemp)"
+
+    if write_if_changed "$tmux_tmp" "$tmux_config"; then
+      changed=1
+    fi
     tmux_tmp="$(mktemp)"
 
-    reload_termux
-    reload_tmux
-    echo "ESC removed from the managed Termux extra-key row."
+    if [ "$changed" -eq 1 ]; then
+      reload_termux
+      reload_tmux
+      echo "ESC removed from the managed Termux extra-key row."
+    else
+      echo "No-ESC Termux/tmux configuration is already up to date."
+    fi
     echo "Neovim uses jk/jj to leave Insert mode; q closes windows and buffers."
     ;;
 
   --restore)
-    backup_file "$termux_properties"
-    backup_file "$tmux_config"
-    mv "$termux_tmp" "$termux_properties"
+    changed=0
+    if write_if_changed "$termux_tmp" "$termux_properties"; then
+      changed=1
+    fi
     termux_tmp="$(mktemp)"
-    mv "$tmux_tmp" "$tmux_config"
+
+    if write_if_changed "$tmux_tmp" "$tmux_config"; then
+      changed=1
+    fi
     tmux_tmp="$(mktemp)"
-    reload_termux
-    reload_tmux
-    echo "Removed nvim_android no-ESC configuration blocks."
+
+    if [ "$changed" -eq 1 ]; then
+      reload_termux
+      reload_tmux
+      echo "Removed nvim_android no-ESC configuration blocks."
+    else
+      echo "No managed no-ESC configuration blocks were present."
+    fi
     ;;
 
   *)
