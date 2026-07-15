@@ -10,6 +10,10 @@ return {
       vim.g.VM_mouse_mappings = 0
       vim.g.VM_silent_exit = 1
       vim.g.VM_show_warnings = 0
+      vim.g.VM_maps = vim.tbl_extend("force", vim.g.VM_maps or {}, {
+        ["Find Under"] = "<C-d>",
+        ["Find Subword Under"] = "<C-d>",
+      })
     end,
   },
 }
