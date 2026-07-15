@@ -109,11 +109,16 @@ local function has_lsp_client()
   return #vim.lsp.get_active_clients({ bufnr = 0 }) > 0
 end
 
-local function run_repo_script(script)
+local function run_repo_script(script, args)
   local path = vim.fn.stdpath("config") .. "/" .. script
   if vim.fn.executable(path) ~= 1 then
     vim.notify("Không tìm thấy script: " .. path, vim.log.levels.WARN)
     return
+  end
+
+  local command = { path }
+  for _, arg in ipairs(args or {}) do
+    table.insert(command, arg)
   end
 
   local on_exit = function(code)
@@ -124,11 +129,11 @@ local function run_repo_script(script)
   end
 
   if vim.system then
-    vim.system({ path }, { cwd = vim.fn.stdpath("config"), text = true }, function(result)
+    vim.system(command, { cwd = vim.fn.stdpath("config"), text = true }, function(result)
       on_exit(result.code)
     end)
   else
-    vim.fn.jobstart({ path }, {
+    vim.fn.jobstart(command, {
       cwd = vim.fn.stdpath("config"),
       on_exit = function(_, code)
         on_exit(code)
@@ -143,6 +148,18 @@ function M.action_menu()
       label = "Format file",
       action = function()
         require("conform").format({ async = true, lsp_fallback = true })
+      end,
+    },
+    {
+      label = "Save all now",
+      action = function()
+        vim.cmd("AutoSaveNow")
+      end,
+    },
+    {
+      label = "Toggle auto save",
+      action = function()
+        vim.cmd("AutoSaveToggle")
       end,
     },
     {
@@ -204,6 +221,13 @@ function M.action_menu()
   end
 
   table.insert(items, {
+    label = "Apply no-ESC Termux layout",
+    action = function()
+      run_repo_script("scripts/disable-esc.sh", { "--apply" })
+    end,
+  })
+
+  table.insert(items, {
     label = "Run performance check",
     action = function()
       run_repo_script("check_performance.sh")
@@ -236,15 +260,25 @@ function M.show_help()
     "  Tab / S-Tab   Indent / outdent",
     "  Ctrl-g        Start macro recording",
     "",
+    "Input without ESC",
+    "  Esc           Disabled in every Neovim mode",
+    "  jk or jj      Leave Insert mode",
+    "  q             Close popup, buffer, Explorer",
+    "  Ctrl-c        Cancel command / close run terminal",
+    "",
+    "Auto save",
+    "  idle 1.8s     Save after the last edit",
+    "  :AutoSaveNow  Save all modified files",
+    "  :AutoSaveToggle Enable or disable auto save",
+    "",
     "Navigation",
     "  Alt-Left/Right Previous/next buffer",
     "  gd / gr / K   Definition / references / hover",
     "  ]d / [d / gl  Diagnostics",
     "",
     "Editing",
-    "  jk or jj      Leave Insert mode",
     "  Alt-Up/Down   Move line or selection",
-    "  <leader>cf    Format file",
+    "  <leader>cf    Format file manually",
     "",
     "Mobile",
     "  <leader>z     Action menu",
@@ -283,7 +317,6 @@ function M.show_help()
     end
   end
   vim.keymap.set("n", "q", close, { buffer = buf, silent = true })
-  vim.keymap.set("n", "<Esc>", close, { buffer = buf, silent = true })
 end
 
 return M
